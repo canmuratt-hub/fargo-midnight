@@ -1,0 +1,213 @@
+// SPDX-License-Identifier: Apache-2.0
+// FARGO — Privacy-Preserving Commerce Infrastructure on Midnight Network
+
+pragma language_version >= 0.16 && <= 0.22;
+
+import CompactStandardLibrary;
+
+export enum OrderStatus {
+  unverified,
+  verified,
+  settled,
+  revoked
+}
+
+export struct MerchantPolicy {
+  owner_pk: Bytes<32>,
+  min_age: Uint<16>,
+  required_kyc_tier: Uint<8>,
+  min_credit_limit: Uint<64>,
+  active: Boolean
+}
+
+export struct OrderAttestation {
+  merchant_id: Bytes<32>,
+  buyer_pseudonym: Bytes<32>,
+  commitment: Bytes<32>,
+  nullifier: Bytes<32>,
+  status: OrderStatus
+}
+
+// ---------------------------------------------------------------------------
+// Public Ledger State (Midnight Public State — Zero PII / Zero Financial Leak)
+// ---------------------------------------------------------------------------
+export ledger merchant_policies: Map<Bytes<32>, MerchantPolicy>;
+export ledger order_attestations: Map<Bytes<32>, OrderAttestation>;
+export ledger used_nullifiers: Set<Bytes<32>>;
+
+export ledger total_merchants: Counter;
+export ledger total_verified_orders: Counter;
+export ledger total_settled_orders: Counter;
+
+// ---------------------------------------------------------------------------
+// Private Witness Functions (Executed Locally — Never Disclosed On-Chain)
+// ---------------------------------------------------------------------------
+witness local_secret_key(): Bytes<32>;
+witness private_buyer_age(): Uint<16>;
+witness private_kyc_tier(): Uint<8>;
+witness private_credit_limit(): Uint<64>;
+witness private_order_amount(): Uint<64>;
+witness private_order_salt(): Bytes<32>;
+witness record_verified_receipt(order_id: Bytes<32>, commitment: Bytes<32>): [];
+
+// ---------------------------------------------------------------------------
+// Pure Cryptographic Helper Circuits
+// ---------------------------------------------------------------------------
+export pure circuit derive_public_key(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "fargo:pk:v1"), sk]);
+}
+
+export pure circuit derive_buyer_pseudonym(sk: Bytes<32>, merchant_id: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "fargo:buyer:v1"), sk, merchant_id]);
+}
+
+export pure circuit compute_order_commitment(
+  merchant_id: Bytes<32>,
+  order_id: Bytes<32>,
+  amount: Uint<64>,
+  kyc_tier: Uint<8>,
+  salt: Bytes<32>
+): Bytes<32> {
+  const amount_bytes = (amount as Field) as Bytes<32>;
+  const tier_bytes = (kyc_tier as Field) as Bytes<32>;
+  const inner = persistentHash<Vector<3, Bytes<32>>>([order_id, amount_bytes, tier_bytes]);
+  return persistentHash<Vector<3, Bytes<32>>>([merchant_id, inner, salt]);
+}
+
+pure circuit compute_nullifier(sk: Bytes<32>, order_id: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "fargo:nullifier:v1"), sk, order_id]);
+}
+
+// ---------------------------------------------------------------------------
+// Exported Zero-Knowledge Circuits
+// ---------------------------------------------------------------------------
+
+// 1. Register or update a Merchant's verification policy on Midnight
+export circuit register_merchant_policy(
+  merchant_id: Bytes<32>,
+  min_age: Uint<16>,
+  required_kyc_tier: Uint<8>,
+  min_credit_limit: Uint<64>
+): [] {
+  const sk = local_secret_key();
+  const owner_pk = derive_public_key(sk);
+  const pub_merchant_id = disclose(merchant_id);
+
+  if (merchant_policies.member(pub_merchant_id)) {
+    const existing = merchant_policies.lookup(pub_merchant_id);
+    assert(disclose(existing.owner_pk == owner_pk), "Unauthorized: caller is not merchant owner");
+  } else {
+    total_merchants.increment(1);
+  }
+
+  const policy = MerchantPolicy {
+    owner_pk: disclose(owner_pk),
+    min_age: disclose(min_age),
+    required_kyc_tier: disclose(required_kyc_tier),
+    min_credit_limit: disclose(min_credit_limit),
+    active: true
+  };
+
+  merchant_policies.insert(pub_merchant_id, policy);
+}
+
+// 2. Deactivate a Merchant policy (only callable by merchant owner in ZK)
+export circuit deactivate_merchant_policy(merchant_id: Bytes<32>): [] {
+  const pub_merchant_id = disclose(merchant_id);
+  assert(merchant_policies.member(pub_merchant_id), "Merchant policy not found");
+
+  const existing = merchant_policies.lookup(pub_merchant_id);
+  const sk = local_secret_key();
+  const caller_pk = derive_public_key(sk);
+  assert(disclose(existing.owner_pk == caller_pk), "Unauthorized: caller is not merchant owner");
+
+  const updated = MerchantPolicy {
+    owner_pk: existing.owner_pk,
+    min_age: existing.min_age,
+    required_kyc_tier: existing.required_kyc_tier,
+    min_credit_limit: existing.min_credit_limit,
+    active: false
+  };
+  merchant_policies.insert(pub_merchant_id, updated);
+}
+
+// 3. Prove commerce eligibility & credit solvency in Zero Knowledge
+//    Private inputs (age, KYC tier, credit limit, order amount, salt) NEVER leave the client.
+export circuit verify_commerce_order(
+  merchant_id: Bytes<32>,
+  order_id: Bytes<32>
+): Bytes<32> {
+  const pub_merchant_id = disclose(merchant_id);
+  const pub_order_id = disclose(order_id);
+
+  assert(merchant_policies.member(pub_merchant_id), "Merchant policy is not registered");
+  const policy = merchant_policies.lookup(pub_merchant_id);
+  assert(policy.active, "Merchant policy is inactive");
+  assert(!order_attestations.member(pub_order_id), "Order ID already attested");
+
+  // Load confidential buyer & transaction attributes via local witnesses
+  const buyer_sk = local_secret_key();
+  const age = private_buyer_age();
+  const kyc_tier = private_kyc_tier();
+  const credit_limit = private_credit_limit();
+  const order_amount = private_order_amount();
+  const salt = private_order_salt();
+
+  // Enforce commerce & compliance rules inside the ZK circuit without disclosing values
+  assert(order_amount > 0, "Order amount must be greater than zero");
+  assert(age >= policy.min_age, "Buyer does not meet minimum age requirement");
+  assert(kyc_tier >= policy.required_kyc_tier, "Buyer does not meet required KYC/KYB tier");
+  assert(credit_limit >= policy.min_credit_limit, "Buyer credit facility below merchant policy minimum");
+  assert(credit_limit >= order_amount, "Order amount exceeds buyer private credit limit");
+
+  // Anti-replay protection via cryptographic nullifier
+  const nullifier = compute_nullifier(buyer_sk, pub_order_id);
+  const pub_nullifier = disclose(nullifier);
+  assert(!used_nullifiers.member(pub_nullifier), "Order replay detected: nullifier already spent");
+  used_nullifiers.insert(pub_nullifier);
+
+  //Selective disclosure: store only unlinkable pseudonym + commitment hash
+  const pseudonym = disclose(derive_buyer_pseudonym(buyer_sk, pub_merchant_id));
+  const commitment = disclose(
+    compute_order_commitment(pub_merchant_id, pub_order_id, order_amount, kyc_tier, salt)
+  );
+
+  const attestation = OrderAttestation {
+    merchant_id: pub_merchant_id,
+    buyer_pseudonym: pseudonym,
+    commitment: commitment,
+    nullifier: pub_nullifier,
+    status: OrderStatus.verified
+  };
+
+  order_attestations.insert(pub_order_id, attestation);
+  total_verified_orders.increment(1);
+  record_verified_receipt(pub_order_id, commitment);
+
+  return commitment;
+}
+
+// 4. Merchant settles a verified order by proving merchant ownership in ZK
+export circuit settle_verified_order(order_id: Bytes<32>): [] {
+  const pub_order_id = disclose(order_id);
+  assert(order_attestations.member(pub_order_id), "Order attestation not found");
+
+  const current = order_attestations.lookup(pub_order_id);
+  assert(current.status == OrderStatus.verified, "Order is not in verified state");
+
+  const policy = merchant_policies.lookup(current.merchant_id);
+  const merchant_sk = local_secret_key();
+  const caller_pk = derive_public_key(merchant_sk);
+  assert(disclose(policy.owner_pk == caller_pk), "Unauthorized: only merchant owner can settle");
+
+  const settled = OrderAttestation {
+    merchant_id: current.merchant_id,
+    buyer_pseudonym: current.buyer_pseudonym,
+    commitment: current.commitment,
+    nullifier: current.nullifier,
+    status: OrderStatus.settled
+  };
+
+  order_attestations.insert(pub_order_id, settled);
+  total_settled_orders.increment(1);
+}

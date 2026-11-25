@@ -1,0 +1,31 @@
+{
+  "name": "@fargo/contract",
+  "version": "0.1.0",
+  "description": "FARGO Compact Zero-Knowledge Smart Contract for Privacy-Preserving Commerce on Midnight Network",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "compact": "compactc src/fargo.compact src/managed/fargo",
+    "test": "vitest run",
+    "build": "node scripts/build-copy.mjs clean && tsc -p tsconfig.build.json && node scripts/build-copy.mjs copy-managed",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}
