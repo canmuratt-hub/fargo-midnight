@@ -1,0 +1,31 @@
+{
+  "name": "fargo-midnight",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FARGO — Privacy-Preserving Commerce Infrastructure built on Midnight Network with Compact Zero-Knowledge Smart Contracts",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/contract",
+    "packages/sdk",
+    "apps/web"
+  ],
+  "scripts": {
+    "docker:compactc": "docker build -t fargo-compactc:0.30.0 -f docker/compactc.Dockerfile .",
+    "compact": "npm --workspace @fargo/contract run compact",
+    "compact:docker": "docker run --rm -v \"${PWD}:/workspace\" fargo-compactc:0.30.0 packages/contract/src/fargo.compact packages/contract/src/managed/fargo",
+    "build": "npm --workspace @fargo/contract run build && npm --workspace @fargo/sdk run build && npm --workspace @fargo/web run build",
+    "test": "npm --workspace @fargo/contract run test && npm --workspace @fargo/sdk run test",
+    "typecheck": "npm --workspace @fargo/contract run typecheck && npm --workspace @fargo/sdk run typecheck && npm --workspace @fargo/web run typecheck",
+    "dev": "npm --workspace @fargo/web run dev"
+  },
+  "keywords": [
+    "midnightntwrk",
+    "midnight",
+    "compact",
+    "zero-knowledge",
+    "privacy",
+    "commerce",
+    "b2b",
+    "selective-disclosure"
+  ]
+}
