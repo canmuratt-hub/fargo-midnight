@@ -16,6 +16,7 @@
     "build": "npm --workspace @fargo/contract run build && npm --workspace @fargo/sdk run build && npm --workspace @fargo/web run build",
     "test": "npm --workspace @fargo/contract run test && npm --workspace @fargo/sdk run test",
     "typecheck": "npm --workspace @fargo/contract run typecheck && npm --workspace @fargo/sdk run typecheck && npm --workspace @fargo/web run typecheck",
+    "start:gateway": "npm --workspace @fargo/sdk run start:gateway",
     "dev": "npm --workspace @fargo/web run dev"
   },
   "keywords": [

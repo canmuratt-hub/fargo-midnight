@@ -418,8 +418,44 @@ export class FargoCommerceClient {
     };
   }
 
-  public generatePluginSnippet(merchantSlug: string): string {
-    return `import { FargoCommerceClient, deriveSecretKeyFromSeed } from "@fargo/sdk";
+  public generatePluginSnippet(
+    merchantSlug: string,
+    platform: "shopify" | "woocommerce" | "erp-rest" = "shopify",
+  ): string {
+    if (platform === "woocommerce") {
+      return `// WooCommerce Checkout Hook + FARGO REST Gateway Verification
+add_action('woocommerce_checkout_process', function () {
+  $proof_payload = json_decode(wp_unslash($_POST['fargo_zk_proof'] ?? '{}'), true);
+  $signature     = sanitize_text_field($_SERVER['HTTP_X_FARGO_SIGNATURE'] ?? '');
+
+  // Verify HMAC-SHA256 webhook envelope from FARGO Midnight Gateway
+  $expected = 'sha256=' . hash_hmac('sha256', wp_json_encode($proof_payload), FARGO_WEBHOOK_SECRET);
+  if (!hash_equals($expected, $signature)) {
+    wc_add_notice('FARGO zero-knowledge compliance proof could not be verified.', 'error');
+  }
+  // Merchant never receives customer DOB, KYC ID file, or corporate credit balance
+});`;
+    }
+
+    if (platform === "erp-rest") {
+      return `# Enterprise B2B ERP / Net-30 Invoice Verification via FARGO REST Gateway
+curl -X POST http://localhost:8787/v1/orders/verify \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "merchantSlug": "${merchantSlug}",
+    "orderNumber": "PO-2026-9040",
+    "buyerSeed": "buyer:bosporus-trade-corp",
+    "buyerAge": 34,
+    "kycTier": 2,
+    "creditLimit": 220000,
+    "orderAmount": 68500
+  }'
+
+# Returns Midnight commitment + anti-replay nullifier + HMAC-signed webhook`;
+    }
+
+    return `// Shopify Checkout UI Extension / Storefront SDK (@fargo/sdk)
+import { FargoCommerceClient, deriveSecretKeyFromSeed } from "@fargo/sdk";
 
 const fargo = new FargoCommerceClient();
 const proof = fargo.verifyCheckoutOrder({
@@ -442,3 +478,10 @@ if (proof.verified) {
 }`;
   }
 }
+
+export {
+  createSignedFargoWebhook,
+  verifyFargoWebhookSignature,
+  type FargoWebhookPayload,
+  type SignedFargoWebhook,
+} from "./webhooks.js";
