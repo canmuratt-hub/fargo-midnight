@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FARGO — Midnight Buildathon Wave 3 Pitch Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f5f1e8;
+        --card: #fcfbf8;
+        --subtle: #efeade;
+        --border: #dfd8ca;
+        --ink: #191615;
+        --muted: #5c544d;
+        --crimson: #9e2323;
+        --crimson-tint: #f7eceb;
+        --forest: #1f5138;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background: #ebe5d8;
+        color: var(--ink);
+        padding: 24px;
+      }
+      .deck-toolbar {
+        max-width: 1120px;
+        margin: 0 auto 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card);
+        border: 1px solid var(--border);
+        padding: 12px 20px;
+        border-radius: 8px;
+      }
+      .print-btn {
+        background: var(--crimson);
+        color: #fff;
+        border: none;
+        padding: 9px 16px;
+        border-radius: 6px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 0.84rem;
+      }
+      .slide {
+        width: 1120px;
+        min-height: 630px;
+        margin: 0 auto 28px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 54px 64px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 6px 24px rgba(25, 22, 21, 0.06);
+        page-break-after: always;
+      }
+      .slide-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1.5px solid var(--ink);
+        padding-bottom: 14px;
+      }
+      .eyebrow {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--crimson);
+        font-weight: 600;
+      }
+      .slide-num {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.76rem;
+        color: var(--muted);
+      }
+      h1 {
+        font-family: "Instrument Serif", serif;
+        font-weight: 400;
+        font-size: 4.1rem;
+        line-height: 1.05;
+        margin: 18px 0;
+      }
+      h2 {
+        font-family: "Instrument Serif", serif;
+        font-weight: 400;
+        font-size: 2.75rem;
+        line-height: 1.12;
+        margin-bottom: 18px;
+      }
+      p.lead {
+        font-size: 1.18rem;
+        color: var(--muted);
+        max-width: 780px;
+        line-height: 1.55;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 20px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+      }
+      .box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 22px;
+      }
+      .box h3 {
+        font-size: 1.02rem;
+        margin-bottom: 8px;
+        color: var(--ink);
+      }
+      .box p,
+      .box li {
+        font-size: 0.9rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .box ul {
+        padding-left: 18px;
+      }
+      .mono {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.8rem;
+      }
+      .pill {
+        display: inline-block;
+        background: var(--crimson-tint);
+        color: var(--crimson);
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .slide-foot {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.78rem;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        padding-top: 12px;
+      }
+      @page {
+        size: 1120px 630px;
+        margin: 0;
+      }
+      @media print {
+        body {
+          background: none;
+          padding: 0;
+        }
+        .deck-toolbar {
+          display: none;
+        }
+        .slide {
+          margin: 0;
+          border: none;
+          border-radius: 0;
+          box-shadow: none;
+          width: 1120px;
+          height: 630px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="deck-toolbar">
+      <div>
+        <strong>FARGO Pitch Deck</strong> · Midnight Buildathon (Wave 3) — Use
+        <strong>Save as PDF</strong> to export a 16:9 slide deck for Akindo.
+      </div>
+      <button class="print-btn" onclick="window.print()">
+        Export / Save as PDF (Ctrl+P)
+      </button>
+    </div>
+
+    <!-- SLIDE 1: COVER -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">Midnight Buildathon · Wave 3 Submission</span>
+        <span class="slide-num">01 / 08</span>
+      </div>
+      <div>
+        <span class="pill">PRIVACY-PRESERVING COMMERCE INFRASTRUCTURE</span>
+        <h1>FARGO</h1>
+        <p class="lead">
+          Verify transactions. Protect business data.<br />
+          A drop-in zero-knowledge compliance and B2B solvency layer powered by
+          <strong>Midnight Compact</strong> smart contracts.
+        </p>
+      </div>
+      <div class="slide-foot">
+        <span>github.com/canmuratt-hub/fargo-midnight</span>
+        <span>Apache-2.0 Open Source · #midnightntwrk</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: THE PROBLEM -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">The Problem</span>
+        <span class="slide-num">02 / 08</span>
+      </div>
+      <div>
+        <h2>Modern Commerce Forces Toxic Data Over-Disclosure</h2>
+        <div class="grid-2">
+          <div class="box">
+            <h3>1. B2B Trade & Net-30 Supply Chains</h3>
+            <p>
+              To qualify for supplier trade credit, enterprises must expose bank
+              statements, total credit lines, and invoice amounts to third-party
+              portals — risking commercial espionage and competitor leakage.
+            </p>
+          </div>
+          <div class="box">
+            <h3>2. Regulated Retail & Identity Friction</h3>
+            <p>
+              Proving statutory age (18+/21+) or KYC compliance forces buyers to
+              surrender raw birthdates and identity documents to dozens of
+              merchant databases that become honeypots for breaches.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>FARGO — Problem Definition</span>
+        <span>Public blockchains expose amounts; Web2 silos leak PII.</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: THE SOLUTION -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">The FARGO Solution</span>
+        <span class="slide-num">03 / 08</span>
+      </div>
+      <div>
+        <h2>Prove Eligibility & Solvency Without Sharing the Underlying Data</h2>
+        <p class="lead">
+          FARGO integrates into existing storefronts and ERPs without database
+          migration, leveraging Midnight’s Dual-Ledger selective disclosure.
+        </p>
+        <div class="grid-3">
+          <div class="box">
+            <h3>Plugin & REST Gateway</h3>
+            <p>
+              15-line SDK (<span class="mono">@fargo/sdk</span>) + HTTP Gateway
+              (<span class="mono">/v1/orders/verify</span>) for Shopify,
+              WooCommerce, and B2B ERPs.
+            </p>
+          </div>
+          <div class="box">
+            <h3>Hybrid Identity & Credit</h3>
+            <p>
+              Feeds off-chain KYC/KYB tiers and approved credit facilities into
+              local Compact witnesses that never leave the client session.
+            </p>
+          </div>
+          <div class="box">
+            <h3>Signed Merchant Webhooks</h3>
+            <p>
+              Emits HMAC-SHA256 verified webhooks backed by immutable Midnight
+              commitments and anti-replay nullifiers.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>FARGO — Solution Overview</span>
+        <span>Non-intrusive Web2.5 Commerce Architecture</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: MIDNIGHT DUAL-LEDGER ARCHITECTURE -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">Why Midnight Network</span>
+        <span class="slide-num">04 / 08</span>
+      </div>
+      <div>
+        <h2>Midnight Dual-Ledger State Separation</h2>
+        <div class="grid-2">
+          <div class="box" style="border-left: 4px solid #7c4d12">
+            <h3>Private Witness State (Kept Local)</h3>
+            <ul>
+              <li><span class="mono">local_secret_key</span> — Actor root key</li>
+              <li><span class="mono">private_buyer_age</span> — Exact buyer age</li>
+              <li><span class="mono">private_kyc_tier</span> — KYC/KYB credential</li>
+              <li><span class="mono">private_credit_limit</span> — Corporate credit line</li>
+              <li><span class="mono">private_order_amount</span> — Confidential invoice USD</li>
+            </ul>
+          </div>
+          <div class="box" style="border-left: 4px solid #1f5138">
+            <h3>Midnight Public Ledger (Selectively Disclosed)</h3>
+            <ul>
+              <li><span class="mono">merchant_policies</span> — Public rule thresholds</li>
+              <li><span class="mono">buyer_pseudonym</span> — Unlinkable per-merchant ID</li>
+              <li><span class="mono">commitment</span> — Salted order attestation hash</li>
+              <li><span class="mono">used_nullifiers</span> — Replay & double-spend set</li>
+              <li><span class="mono">OrderStatus</span> — Verified / Settled lifecycle</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>fargo.compact (Compact v0.22 / compactc 0.30.0)</span>
+        <span>Zero PII · Zero Competitor Pricing Leakage</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: ENGINEERING & QA DEPTH -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">Engineering & Quality Assurance</span>
+        <span class="slide-num">05 / 08</span>
+      </div>
+      <div>
+        <h2>Production-Grade Implementation & 22 Automated Tests</h2>
+        <div class="grid-3">
+          <div class="box">
+            <h3>4 Compiled ZK Circuits</h3>
+            <p>
+              <span class="mono">register_merchant_policy</span>,
+              <span class="mono">deactivate_merchant_policy</span>,
+              <span class="mono">verify_commerce_order</span>, and
+              <span class="mono">settle_verified_order</span> compiled via
+              <span class="mono">compactc 0.30.0</span>.
+            </p>
+          </div>
+          <div class="box">
+            <h3>22/22 Passing Specs</h3>
+            <p>
+              17 Compact circuit unit, boundary, privacy-audit & 15-order stress
+              tests + 5 live HTTP REST Gateway & HMAC webhook tests.
+            </p>
+          </div>
+          <div class="box">
+            <h3>Plug-and-Play Web UI</h3>
+            <p>
+              React + Vite interface executing real Midnight WASM circuits
+              directly in the browser with 0 external setup hurdles for judges.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>FARGO — Technical Verification</span>
+        <span>Reproducible Docker Toolchain Included</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: TARGET MARKET & USE CASES -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">Market Opportunity</span>
+        <span class="slide-num">06 / 08</span>
+      </div>
+      <div>
+        <h2>High-Urgency Commercial Verticals</h2>
+        <div class="grid-3">
+          <div class="box">
+            <h3>B2B Wholesale & Net-30</h3>
+            <p>
+              Industrial, manufacturing, and textile suppliers verifying buyer
+              credit lines without exposing negotiated invoice prices.
+            </p>
+          </div>
+          <div class="box">
+            <h3>Regulated E-Commerce</h3>
+            <p>
+              Age-gated goods, pharmaceuticals, and regional compliance checks
+              with zero customer ID storage liability (GDPR/KVKK friendly).
+            </p>
+          </div>
+          <div class="box">
+            <h3>Cross-Platform Marketplaces</h3>
+            <p>
+              Portable, privacy-preserving buyer reputation and KYB readiness
+              across independent B2B marketplaces.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>FARGO — Commercial Viability</span>
+        <span>Addressing Real-World Non-DeFi Enterprise Commerce</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: BUSINESS MODEL & GO-TO-MARKET -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">Business Model & Roadmap</span>
+        <span class="slide-num">07 / 08</span>
+      </div>
+      <div>
+        <h2>B2B SaaS + Per-Attestation Infrastructure Model</h2>
+        <div class="grid-2">
+          <div class="box">
+            <h3>Monetization Strategy</h3>
+            <ul>
+              <li><strong>Developer / SMB Tier:</strong> Free SDK + pay-per-verification API ($0.03 / attested order).</li>
+              <li><strong>Enterprise B2B Tier:</strong> Monthly SaaS subscription for custom KYB/credit oracle bridges & SLA gateway hosting.</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h3>4-Stage Execution Roadmap</h3>
+            <ul>
+              <li><strong>Stage 1 (Done):</strong> Compiled Compact protocol, SDK, REST Gateway & Live UI.</li>
+              <li><strong>Stage 2:</strong> Midnight PreProd proof-server & Lace Wallet production bridge.</li>
+              <li><strong>Stage 3:</strong> One-click Shopify & WooCommerce marketplace plugins.</li>
+              <li><strong>Stage 4:</strong> Pilot deployments with B2B industrial & wholesale merchants.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>FARGO — Go-To-Market</span>
+        <span>Ready for Midnight Build Club Incubation</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: CLOSING -->
+    <section class="slide">
+      <div class="slide-top">
+        <span class="eyebrow">Summary</span>
+        <span class="slide-num">08 / 08</span>
+      </div>
+      <div>
+        <span class="pill">VERIFY TRANSACTIONS · PROTECT BUSINESS DATA</span>
+        <h1>Thank You</h1>
+        <p class="lead">
+          Explore the compiled Compact contract, run all 22 automated tests, and
+          test live zero-knowledge commerce attestations today:
+        </p>
+        <div class="box" style="margin-top: 22px; max-width: 680px">
+          <p class="mono" style="color: var(--ink)">
+            Repository: https://github.com/canmuratt-hub/fargo-midnight<br />
+            Quick Start: npm install && npm test && npm run dev
+          </p>
+        </div>
+      </div>
+      <div class="slide-foot">
+        <span>FARGO · Built on Midnight Network</span>
+        <span>Apache License 2.0</span>
+      </div>
+    </section>
+  </body>
+</html>
