@@ -27,9 +27,11 @@ export const UI_COPY = {
     tabPolicies: "Merchant Policy Rules",
     tabSdk: "Plugin & REST Gateway",
     presetsLabel: "Test Presets:",
-    presetB2B: "B2B Net-30 ($72,000)",
-    presetRetail: "Regulated Retail (21+)",
-    presetDecline: "Over Credit Limit (Decline)",
+    presetMarketplace: "1. Marketplace Laptop Credit ($1,500)",
+    presetFactory: "2. Textile Mill 60-Day Credit ($60,000)",
+    presetB2B: "3. B2B Net-30 ($72,000)",
+    presetRetail: "4. Regulated Retail (21+)",
+    presetDecline: "5. Over Credit Limit (Decline)",
 
     // Tab 1 Left: Buyer Checkout
     buyerEyebrow: "01 · Buyer Session",
@@ -149,9 +151,11 @@ export const UI_COPY = {
     tabPolicies: "Mağaza Kural Yönetimi",
     tabSdk: "Eklenti & REST API Kapısı",
     presetsLabel: "Hazır Senaryolar:",
-    presetB2B: "B2B Vadeli Alım ($72,000)",
-    presetRetail: "Yaş Sınırlı Perakende (21+)",
-    presetDecline: "Kredi Limiti Aşımı (Reddet)",
+    presetMarketplace: "1. Alışveriş Kredisiyle Laptop ($1,500)",
+    presetFactory: "2. Fabrika Açık Hesap Kumaş ($60,000)",
+    presetB2B: "3. B2B Vadeli Alım ($72,000)",
+    presetRetail: "4. Yaş Sınırlı Perakende (21+)",
+    presetDecline: "5. Kredi Limiti Aşımı (Reddet)",
 
     // Tab 1 Left: Buyer Checkout
     buyerEyebrow: "01 · Alıcı (Müşteri) Ekranı",

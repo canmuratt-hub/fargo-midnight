@@ -27,6 +27,12 @@ import { type Locale, UI_COPY } from "./i18n";
 
 type ActiveTab = "checkout" | "policies" | "sdk";
 type SdkPlatform = "shopify" | "woocommerce" | "erp-rest";
+type PresetId =
+  | "marketplace-laptop"
+  | "factory-textile"
+  | "b2b-valid"
+  | "retail-valid"
+  | "credit-fail";
 type WalletStateKey =
   | "walletDefault"
   | "walletLaceConnected"
@@ -36,7 +42,11 @@ type WalletStateKey =
 interface MerchantAccount {
   readonly slug: string;
   readonly displayName: string;
+  readonly displayNameTr: string;
   readonly secretSeed: string;
+  readonly minAge: number;
+  readonly requiredKycTier: KycTierLevel;
+  readonly minCreditLimit: number;
   readonly sampleItemEn: string;
   readonly sampleItemTr: string;
   readonly sampleTermsEn: string;
@@ -45,18 +55,58 @@ interface MerchantAccount {
 
 const DEFAULT_MERCHANTS: readonly MerchantAccount[] = [
   {
+    slug: "trendpazar-shopping-credit",
+    displayName: "TrendPazar Marketplace (Shopping Credit)",
+    displayNameTr: "TrendPazar Pazaryeri (Alışveriş Kredisi)",
+    secretSeed: "merchant:trendpazar-shopping-credit-v1",
+    minAge: 18,
+    requiredKycTier: 1,
+    minCreditLimit: 2_000,
+    sampleItemEn: "Order #TP-904 — 16\" ProBook Laptop (Installment Checkout)",
+    sampleItemTr:
+      "Sipariş #TP-904 — 16\" Dizüstü Bilgisayar (Alışveriş Kredisi ile)",
+    sampleTermsEn:
+      "Buy-Now-Pay-Later Credit · Min Age 18+ · Verified ID (Tier 1) · $2,000 Credit Floor",
+    sampleTermsTr:
+      "Şimdi Al Sonra Öde · En Az 18 Yaş · e-Devlet Bireysel Kimlik (Seviye 1) · Min. $2,000 Limit",
+  },
+  {
+    slug: "bursa-textile-mill",
+    displayName: "Bursa Organized Textile Mill (60-Day Open Account)",
+    displayNameTr: "Bursa Organize Kumaş Fabrikası (60 Gün Açık Hesap)",
+    secretSeed: "merchant:bursa-textile-mill-v1",
+    minAge: 21,
+    requiredKycTier: 2,
+    minCreditLimit: 50_000,
+    sampleItemEn: "Lot #BT-612 — Wholesale Combed Cotton Fabric (12 Tons)",
+    sampleItemTr: "Parti #BT-612 — Toptan Penye Kumaş Sevkiyatı (12 Ton)",
+    sampleTermsEn:
+      "60-Day Post-Dated Check / Open Account · Corporate KYB (Tier 2) · $50,000 Bank Guarantee",
+    sampleTermsTr:
+      "60 Gün Vadeli Çek / Açık Hesap · Vergi Levhalı Şirket (Seviye 2) · $50,000 Banka Teminatı",
+  },
+  {
     slug: "anatolia-b2b-supply",
     displayName: "Anatolia Industrial Supply Co.",
+    displayNameTr: "Anatolia Sanayi Tedarik A.Ş.",
     secretSeed: "merchant:anatolia-b2b-supply-v1",
+    minAge: 21,
+    requiredKycTier: 2,
+    minCreditLimit: 50_000,
     sampleItemEn: "Batch #408 — Precision CNC Titanium Fasteners (400 Units)",
-    sampleItemTr: "Parti #408 — Hassas CNC Titanyum Bağlantı Parçası (400 Adet)",
+    sampleItemTr:
+      "Parti #408 — Hassas CNC Titanyum Bağlantı Parçası (400 Adet)",
     sampleTermsEn: "Net-30 Enterprise Trade Credit · KYB Tier 2 Required",
     sampleTermsTr: "30 Gün Vadeli Kurumsal Ticari Alım · KYB Seviye 2 Şartlı",
   },
   {
     slug: "aura-regulated-retail",
     displayName: "Aura Reserve & Regulated Goods",
+    displayNameTr: "Aura Özel & Yaş Sınırlı Ürünler",
     secretSeed: "merchant:aura-regulated-retail-v1",
+    minAge: 21,
+    requiredKycTier: 1,
+    minCreditLimit: 1_000,
     sampleItemEn: "Collector Cellar Allocation — Vintage Reserve Case",
     sampleItemTr: "Özel Koleksiyon Ürün Paketi — Yaş Sınırlı Satış",
     sampleTermsEn: "Direct Retail Checkout · Statutory Age 21+ & KYC Tier 1",
@@ -77,20 +127,20 @@ function createSeededClient(): FargoCommerceClient {
       merchantSecretKey: deriveSecretKeyFromSeed(m.secretSeed),
       merchantSlug: m.slug,
       displayName: m.displayName,
-      minAge: 21,
-      requiredKycTier: m.slug.includes("b2b") ? 2 : 1,
-      minCreditLimit: m.slug.includes("b2b") ? 50_000 : 1_000,
+      minAge: m.minAge,
+      requiredKycTier: m.requiredKycTier,
+      minCreditLimit: m.minCreditLimit,
     });
   }
 
   client.verifyCheckoutOrder({
-    buyerSecretKey: deriveSecretKeyFromSeed("buyer:marmara-manufacturing"),
-    merchantSlug: "anatolia-b2b-supply",
-    orderNumber: "PO-2026-4010",
-    buyerAge: 36,
+    buyerSecretKey: deriveSecretKeyFromSeed("buyer:garment-workshop-bursa"),
+    merchantSlug: "bursa-textile-mill",
+    orderNumber: "FAB-2026-1040",
+    buyerAge: 38,
     kycTier: 2,
-    creditLimit: 200_000,
-    orderAmount: 58_000,
+    creditLimit: 120_000,
+    orderAmount: 60_000,
   });
 
   return client;
@@ -110,18 +160,16 @@ export function App() {
   const [walletStateKey, setWalletStateKey] =
     useState<WalletStateKey>("walletDefault");
 
-  // Checkout Witness Form State
+  // Default to Scenario 1 (Marketplace Laptop Credit) on open
   const [merchantSlug, setMerchantSlug] = useState<string>(
-    "anatolia-b2b-supply",
+    "trendpazar-shopping-credit",
   );
-  const [orderNumber, setOrderNumber] = useState<string>("PO-2026-7742");
-  const [buyerSeed, setBuyerSeed] = useState<string>(
-    "buyer:bosporus-trade-corp",
-  );
-  const [buyerAge, setBuyerAge] = useState<number>(34);
-  const [kycTier, setKycTier] = useState<KycTierLevel>(2);
-  const [creditLimit, setCreditLimit] = useState<number>(220_000);
-  const [orderAmount, setOrderAmount] = useState<number>(68_500);
+  const [orderNumber, setOrderNumber] = useState<string>("TP-2026-3091");
+  const [buyerSeed, setBuyerSeed] = useState<string>("buyer:verified-shopper");
+  const [buyerAge, setBuyerAge] = useState<number>(24);
+  const [kycTier, setKycTier] = useState<KycTierLevel>(1);
+  const [creditLimit, setCreditLimit] = useState<number>(3_500);
+  const [orderAmount, setOrderAmount] = useState<number>(1_500);
   const [lastOutcome, setLastOutcome] =
     useState<FargoVerificationOutcome | null>(null);
   const [lastWebhook, setLastWebhook] = useState<SignedFargoWebhook | null>(
@@ -131,28 +179,33 @@ export function App() {
 
   // Merchant Policy Console State
   const [newMerchantSlug, setNewMerchantSlug] = useState<string>(
-    "aegean-medical-logistics",
+    "kayseri-furniture-export",
   );
   const [newMerchantName, setNewMerchantName] = useState<string>(
-    "Aegean Cold-Chain Pharma Supply",
+    "Kayseri Wholesale Furniture Hub",
   );
   const [newMerchantSeed, setNewMerchantSeed] = useState<string>(
-    "merchant:aegean-pharma-v1",
+    "merchant:kayseri-furniture-v1",
   );
   const [newMinAge, setNewMinAge] = useState<number>(21);
   const [newKycTier, setNewKycTier] = useState<KycTierLevel>(2);
-  const [newMinCredit, setNewMinCredit] = useState<number>(75_000);
+  const [newMinCredit, setNewMinCredit] = useState<number>(30_000);
   const [merchantSeedsBySlug, setMerchantSeedsBySlug] = useState<
     Record<string, string>
-  >({
-    "anatolia-b2b-supply": DEFAULT_MERCHANTS[0]!.secretSeed,
-    "aura-regulated-retail": DEFAULT_MERCHANTS[1]!.secretSeed,
-  });
+  >(() =>
+    Object.fromEntries(DEFAULT_MERCHANTS.map((m) => [m.slug, m.secretSeed])),
+  );
 
   const selectedPolicy = ledgerView.policies.find(
     (p) => p.merchantSlug === merchantSlug,
   );
   const merchantMeta = DEFAULT_MERCHANTS.find((m) => m.slug === merchantSlug);
+
+  function getMerchantLabel(slug: string, fallbackName: string): string {
+    const found = DEFAULT_MERCHANTS.find((m) => m.slug === slug);
+    if (!found) return fallbackName;
+    return locale === "tr" ? found.displayNameTr : found.displayName;
+  }
 
   function refreshLedger(): void {
     setLedgerView(client.inspectDualLedger());
@@ -175,11 +228,27 @@ export function App() {
     setWalletStateKey("walletVerified");
   }
 
-  function applyPreset(preset: "b2b-valid" | "retail-valid" | "credit-fail") {
+  function applyPreset(preset: PresetId) {
     setActiveTab("checkout");
     setShowWebhookModal(false);
     const suffix = Math.floor(1000 + Math.random() * 8999);
-    if (preset === "b2b-valid") {
+    if (preset === "marketplace-laptop") {
+      setMerchantSlug("trendpazar-shopping-credit");
+      setOrderNumber(`TP-2026-${suffix}`);
+      setBuyerSeed("buyer:verified-shopper");
+      setBuyerAge(24);
+      setKycTier(1);
+      setCreditLimit(3_500);
+      setOrderAmount(1_500);
+    } else if (preset === "factory-textile") {
+      setMerchantSlug("bursa-textile-mill");
+      setOrderNumber(`FAB-2026-${suffix}`);
+      setBuyerSeed("buyer:textile-workshop-tr");
+      setBuyerAge(38);
+      setKycTier(2);
+      setCreditLimit(120_000);
+      setOrderAmount(60_000);
+    } else if (preset === "b2b-valid") {
       setMerchantSlug("anatolia-b2b-supply");
       setOrderNumber(`PO-2026-${suffix}`);
       setBuyerSeed("buyer:bosporus-trade-corp");
@@ -196,7 +265,7 @@ export function App() {
       setCreditLimit(12_000);
       setOrderAmount(1_450);
     } else {
-      setMerchantSlug("anatolia-b2b-supply");
+      setMerchantSlug("bursa-textile-mill");
       setOrderNumber(`PO-DECLINE-${suffix}`);
       setBuyerSeed("buyer:under-limit-account");
       setBuyerAge(29);
@@ -251,11 +320,14 @@ export function App() {
       setLastWebhook(signed);
 
       const nextNum = Math.floor(1000 + Math.random() * 8999);
-      setOrderNumber(
-        merchantSlug.includes("b2b")
-          ? `PO-2026-${nextNum}`
-          : `ORD-2026-${nextNum}`,
-      );
+      const prefix = merchantSlug.startsWith("trendpazar")
+        ? "TP"
+        : merchantSlug.startsWith("bursa")
+          ? "FAB"
+          : merchantSlug.includes("b2b")
+            ? "PO"
+            : "ORD";
+      setOrderNumber(`${prefix}-2026-${nextNum}`);
     } else {
       setLastWebhook(null);
       setShowWebhookModal(false);
@@ -404,6 +476,20 @@ export function App() {
           <button
             type="button"
             className="scenario-chip"
+            onClick={() => applyPreset("marketplace-laptop")}
+          >
+            {t.presetMarketplace}
+          </button>
+          <button
+            type="button"
+            className="scenario-chip"
+            onClick={() => applyPreset("factory-textile")}
+          >
+            {t.presetFactory}
+          </button>
+          <button
+            type="button"
+            className="scenario-chip"
             onClick={() => applyPreset("b2b-valid")}
           >
             {t.presetB2B}
@@ -472,7 +558,7 @@ export function App() {
                   >
                     {ledgerView.policies.map((pol) => (
                       <option key={pol.merchantSlug} value={pol.merchantSlug}>
-                        {pol.displayName} (
+                        {getMerchantLabel(pol.merchantSlug, pol.displayName)} (
                         {pol.active
                           ? t.activePolicySuffix
                           : t.pausedPolicySuffix}
@@ -911,7 +997,9 @@ export function App() {
               {ledgerView.policies.map((pol) => (
                 <div key={pol.merchantIdHex} className="record-item">
                   <div className="record-top">
-                    <strong>{pol.displayName}</strong>
+                    <strong>
+                      {getMerchantLabel(pol.merchantSlug, pol.displayName)}
+                    </strong>
                     <span
                       className={`tag ${
                         pol.active ? "tag-verified" : "tag-rejected"
