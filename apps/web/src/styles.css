@@ -114,6 +114,33 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lang-switch {
+  display: inline-flex;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.lang-btn {
+  border: none;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.lang-btn.active {
+  background: var(--crimson);
+  color: #fcfbf8;
 }
 
 .runtime-btn {
