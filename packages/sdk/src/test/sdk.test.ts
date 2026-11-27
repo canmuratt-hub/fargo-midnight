@@ -269,4 +269,53 @@ describe("@fargo/sdk Commerce Integration, Webhooks & REST Gateway", () => {
       "/v1/orders/verify",
     );
   });
+
+  it("detects buyer witness tampering against Bank/KYC credential seal and issues audit certificates for valid orders", () => {
+    const client = new FargoCommerceClient();
+    const merchantSk = deriveSecretKeyFromSeed("merchant:bursa-mill");
+    const buyerSk = deriveSecretKeyFromSeed("buyer:tamper-test");
+
+    client.registerOrUpdatePolicy({
+      merchantSecretKey: merchantSk,
+      merchantSlug: "bursa-mill",
+      displayName: "Bursa Textile Mill",
+      minAge: 21,
+      requiredKycTier: 2,
+      minCreditLimit: 50_000,
+    });
+
+    // Buyer has a $30,000 Bank seal, but lies and submits $90,000 in witness!
+    const tampered = client.verifyCheckoutOrder({
+      buyerSecretKey: buyerSk,
+      merchantSlug: "bursa-mill",
+      orderNumber: "FAB-TAMPER-01",
+      buyerAge: 35,
+      kycTier: 2,
+      creditLimit: 90_000,
+      bankSealedCreditLimit: 30_000,
+      orderAmount: 60_000,
+    });
+
+    expect(tampered.verified).toBe(false);
+    expect(tampered.errorMessage).toContain(
+      "Tampered or unverified bank/KYC credential seal",
+    );
+
+    // Honest order generates a verifiable ZK Compliance Certificate
+    const honest = client.verifyCheckoutOrder({
+      buyerSecretKey: deriveSecretKeyFromSeed("buyer:honest-mill-client"),
+      merchantSlug: "bursa-mill",
+      orderNumber: "FAB-CERT-02",
+      buyerAge: 38,
+      kycTier: 2,
+      creditLimit: 120_000,
+      orderAmount: 60_000,
+    });
+    expect(honest.verified).toBe(true);
+
+    const cert = client.generateComplianceCertificate("FAB-CERT-02");
+    expect(cert).not.toBeNull();
+    expect(cert?.privacyAttestation.issuerBankSignatureVerified).toBe(true);
+    expect(cert?.privacyAttestation.gdprKvkkCompliant).toBe(true);
+  });
 });

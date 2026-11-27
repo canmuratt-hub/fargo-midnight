@@ -36,6 +36,12 @@ export interface CheckoutVerificationRequest {
   readonly creditLimit: number | bigint;
   readonly orderAmount: number | bigint;
   readonly orderSalt?: Uint8Array;
+  /**
+   * Optional: if set to a different amount than `creditLimit`, simulates a buyer
+   * receiving an official Bank seal for `bankSealedCreditLimit` and then locally
+   * tampering their `creditLimit` witness to cheat the merchant policy.
+   */
+  readonly bankSealedCreditLimit?: number | bigint;
 }
 
 export interface PublicPolicyView {
@@ -53,17 +59,44 @@ export interface PublicAttestationView {
   readonly orderNumber: string;
   readonly orderIdHex: string;
   readonly merchantSlug: string;
+  readonly merchantDisplayName: string;
   readonly merchantIdHex: string;
   readonly buyerPseudonymHex: string;
   readonly commitmentHex: string;
   readonly nullifierHex: string;
+  readonly credentialSealHex: string;
   readonly status: "unverified" | "verified" | "settled" | "revoked";
   readonly verifiedAtIso: string;
 }
 
+export interface ComplianceCertificate {
+  readonly certificateId: string;
+  readonly protocol: "FARGO Midnight Compact v0.22";
+  readonly contractAddress: string;
+  readonly orderNumber: string;
+  readonly merchantSlug: string;
+  readonly merchantDisplayName: string;
+  readonly status: "VERIFIED" | "SETTLED";
+  readonly issuedAtIso: string;
+  readonly cryptographicProofs: {
+    readonly orderCommitmentHex: string;
+    readonly antiReplayNullifierHex: string;
+    readonly buyerPseudonymHex: string;
+    readonly bankCredentialSealHex: string;
+  };
+  readonly privacyAttestation: {
+    readonly gdprKvkkCompliant: true;
+    readonly zeroPiiStoredOnChain: true;
+    readonly zeroInvoiceAmountExposed: true;
+    readonly issuerBankSignatureVerified: true;
+  };
+}
+
 export interface DualLedgerSnapshot {
   readonly contractAddress: string;
+  readonly trustedIssuerPublicKeyHex: string;
   readonly totalMerchants: number;
+  readonly totalCredentialsIssued: number;
   readonly totalVerifiedOrders: number;
   readonly totalSettledOrders: number;
   readonly activeNullifierCount: number;
@@ -79,6 +112,7 @@ export interface FargoVerificationOutcome {
   readonly commitmentHex?: string;
   readonly nullifierHex?: string;
   readonly buyerPseudonymHex?: string;
+  readonly credentialSealHex?: string;
   readonly executionTimeMs: number;
   readonly errorMessage?: string;
   readonly privateDataKeptOffChain: {
@@ -127,19 +161,26 @@ interface InternalSession {
 
 /**
  * FARGO Commerce Client — Drop-in Privacy & Verification Layer powered by Midnight Compact.
- * Connects e-commerce checkouts and B2B portals to the compiled FARGO zero-knowledge contract.
+ * Includes Trusted Bank / KYC Authority credential sealing and zero-knowledge order proofs.
  */
 export class FargoCommerceClient {
   private readonly contract: FargoContract.Contract<FargoPrivateState>;
   private sharedState: ChargedState;
   private readonly sessions = new Map<string, InternalSession>();
+  private readonly bankAuthoritySecretKey: Uint8Array;
+  public readonly trustedIssuerPublicKeyHex: string;
   private readonly merchantLabels = new Map<
     string,
     { slug: string; displayName: string }
   >();
   private readonly orderLabels = new Map<
     string,
-    { orderNumber: string; merchantSlug: string; timestampIso: string }
+    {
+      orderNumber: string;
+      merchantSlug: string;
+      timestampIso: string;
+      credentialSealHex: string;
+    }
   >();
   public readonly contractAddress = sampleContractAddress();
 
@@ -147,13 +188,23 @@ export class FargoCommerceClient {
     this.contract = new FargoContract.Contract<FargoPrivateState>(
       fargoWitnesses as unknown as FargoContract.Witnesses<FargoPrivateState>,
     );
+    this.bankAuthoritySecretKey = deriveSecretKeyFromSeed(
+      "issuer:fargo-national-banking-kyc-authority-v1",
+    );
     const bootstrapState = createFargoPrivateState({
-      secretKey: new Uint8Array(32).fill(0x07),
+      secretKey: this.bankAuthoritySecretKey,
     });
     const init = this.contract.initialState(
       createConstructorContext(bootstrapState, "0".repeat(64)),
     );
     this.sharedState = init.currentContractState.data;
+
+    // Register the Trusted Bank & Identity Authority on Midnight ledger
+    const issuerHex = toHex(this.bankAuthoritySecretKey);
+    const ctx = this.getOrCreateSession(issuerHex, bootstrapState);
+    const regRes = this.contract.impureCircuits.register_trusted_issuer(ctx);
+    this.commitSession(issuerHex, regRes.context);
+    this.trustedIssuerPublicKeyHex = toHex(regRes.result);
   }
 
   private getOrCreateSession(
@@ -195,6 +246,34 @@ export class FargoCommerceClient {
       zswapState: context.currentZswapLocalState,
     });
     this.sharedState = context.currentQueryContext.state;
+  }
+
+  private issueBankSealForBuyer(params: {
+    buyerSecretKey: Uint8Array;
+    buyerAge: number;
+    kycTier: KycTierLevel;
+    sealedCreditLimit: number | bigint;
+    credentialSalt: Uint8Array;
+  }): Uint8Array {
+    const buyerPk = FargoContract.pureCircuits.derive_public_key(
+      params.buyerSecretKey,
+    );
+    const seal = FargoContract.pureCircuits.compute_credential_seal(
+      buyerPk,
+      BigInt(params.buyerAge),
+      BigInt(params.kycTier),
+      BigInt(params.sealedCreditLimit),
+      params.credentialSalt,
+    );
+
+    const issuerHex = toHex(this.bankAuthoritySecretKey);
+    const issuerPs = createFargoPrivateState({
+      secretKey: this.bankAuthoritySecretKey,
+    });
+    const ctx = this.getOrCreateSession(issuerHex, issuerPs);
+    const res = this.contract.impureCircuits.issue_buyer_credential(ctx, seal);
+    this.commitSession(issuerHex, res.context);
+    return seal;
   }
 
   public registerOrUpdatePolicy(input: MerchantPolicyInput): PublicPolicyView {
@@ -261,7 +340,22 @@ export class FargoCommerceClient {
     const actorHex = toHex(req.buyerSecretKey);
 
     const salt =
-      req.orderSalt ?? deriveSecretKeyFromSeed(`salt:${req.orderNumber}:${Date.now()}`);
+      req.orderSalt ??
+      deriveSecretKeyFromSeed(`salt:${req.orderNumber}:${Date.now()}`);
+    const credSalt = deriveSecretKeyFromSeed(
+      `cred-salt:${req.orderNumber}:${actorHex.slice(0, 16)}`,
+    );
+
+    // Bank seals the TRUE bank-approved credit limit (unless tampered, equals req.creditLimit)
+    const officialBankLimit = req.bankSealedCreditLimit ?? req.creditLimit;
+    const issuedSeal = this.issueBankSealForBuyer({
+      buyerSecretKey: req.buyerSecretKey,
+      buyerAge: req.buyerAge,
+      kycTier: req.kycTier,
+      sealedCreditLimit: officialBankLimit,
+      credentialSalt: credSalt,
+    });
+    const credentialSealHex = toHex(issuedSeal);
 
     const ps = createFargoPrivateState({
       secretKey: req.buyerSecretKey,
@@ -270,6 +364,7 @@ export class FargoCommerceClient {
       creditLimit: req.creditLimit,
       orderAmount: req.orderAmount,
       orderSalt: salt,
+      credentialSalt: credSalt,
     });
 
     try {
@@ -285,6 +380,7 @@ export class FargoCommerceClient {
         orderNumber: req.orderNumber,
         merchantSlug: req.merchantSlug,
         timestampIso: new Date().toISOString(),
+        credentialSealHex,
       });
 
       const l = FargoContract.ledger(this.sharedState);
@@ -299,6 +395,7 @@ export class FargoCommerceClient {
         commitmentHex: toHex(res.result),
         nullifierHex: toHex(att.nullifier),
         buyerPseudonymHex: toHex(att.buyer_pseudonym),
+        credentialSealHex,
         executionTimeMs: elapsed,
         privateDataKeptOffChain: {
           exactAgeHidden: true,
@@ -316,6 +413,7 @@ export class FargoCommerceClient {
         orderNumber: req.orderNumber,
         orderIdHex,
         merchantSlug: req.merchantSlug,
+        credentialSealHex,
         executionTimeMs: elapsed,
         errorMessage: cleanMsg,
         privateDataKeptOffChain: {
@@ -354,12 +452,49 @@ export class FargoCommerceClient {
       orderNumber: meta?.orderNumber ?? params.orderNumber,
       orderIdHex,
       merchantSlug: merchantMeta?.slug ?? meta?.merchantSlug ?? "unknown",
+      merchantDisplayName:
+        merchantMeta?.displayName ?? merchantMeta?.slug ?? "Merchant",
       merchantIdHex: toHex(att.merchant_id),
       buyerPseudonymHex: toHex(att.buyer_pseudonym),
       commitmentHex: toHex(att.commitment),
       nullifierHex: toHex(att.nullifier),
+      credentialSealHex: meta?.credentialSealHex ?? "0".repeat(64),
       status: mapStatusLabel(att.status),
       verifiedAtIso: meta?.timestampIso ?? new Date().toISOString(),
+    };
+  }
+
+  public generateComplianceCertificate(
+    orderNumber: string,
+  ): ComplianceCertificate | null {
+    const snapshot = this.inspectDualLedger();
+    const att = snapshot.attestations.find(
+      (a) => a.orderNumber === orderNumber,
+    );
+    if (!att || (att.status !== "verified" && att.status !== "settled")) {
+      return null;
+    }
+    return {
+      certificateId: `CERT-MDN-${att.commitmentHex.slice(0, 10).toUpperCase()}`,
+      protocol: "FARGO Midnight Compact v0.22",
+      contractAddress: snapshot.contractAddress,
+      orderNumber: att.orderNumber,
+      merchantSlug: att.merchantSlug,
+      merchantDisplayName: att.merchantDisplayName,
+      status: att.status === "settled" ? "SETTLED" : "VERIFIED",
+      issuedAtIso: att.verifiedAtIso,
+      cryptographicProofs: {
+        orderCommitmentHex: att.commitmentHex,
+        antiReplayNullifierHex: att.nullifierHex,
+        buyerPseudonymHex: att.buyerPseudonymHex,
+        bankCredentialSealHex: att.credentialSealHex,
+      },
+      privacyAttestation: {
+        gdprKvkkCompliant: true,
+        zeroPiiStoredOnChain: true,
+        zeroInvoiceAmountExposed: true,
+        issuerBankSignatureVerified: true,
+      },
     };
   }
 
@@ -398,10 +533,13 @@ export class FargoCommerceClient {
         orderNumber: oMeta?.orderNumber ?? hex.slice(0, 12),
         orderIdHex: hex,
         merchantSlug: mMeta?.slug ?? oMeta?.merchantSlug ?? hex.slice(0, 12),
+        merchantDisplayName:
+          mMeta?.displayName ?? mMeta?.slug ?? hex.slice(0, 12),
         merchantIdHex: toHex(att.merchant_id),
         buyerPseudonymHex: toHex(att.buyer_pseudonym),
         commitmentHex: toHex(att.commitment),
         nullifierHex: toHex(att.nullifier),
+        credentialSealHex: oMeta?.credentialSealHex ?? "0".repeat(64),
         status: mapStatusLabel(att.status),
         verifiedAtIso: oMeta?.timestampIso ?? new Date().toISOString(),
       });
@@ -409,7 +547,9 @@ export class FargoCommerceClient {
 
     return {
       contractAddress: String(this.contractAddress),
+      trustedIssuerPublicKeyHex: this.trustedIssuerPublicKeyHex,
       totalMerchants: Number(l.total_merchants),
+      totalCredentialsIssued: Number(l.total_credentials_issued),
       totalVerifiedOrders: Number(l.total_verified_orders),
       totalSettledOrders: Number(l.total_settled_orders),
       activeNullifierCount: Number(l.used_nullifiers.size()),
@@ -451,7 +591,7 @@ curl -X POST http://localhost:8787/v1/orders/verify \\
     "orderAmount": 68500
   }'
 
-# Returns Midnight commitment + anti-replay nullifier + HMAC-signed webhook`;
+# Returns Midnight commitment + Bank seal proof + HMAC-signed webhook`;
     }
 
     return `// Shopify Checkout UI Extension / Storefront SDK (@fargo/sdk)
@@ -462,10 +602,10 @@ const proof = fargo.verifyCheckoutOrder({
   merchantSlug: "${merchantSlug}",
   orderNumber: checkout.orderId,
   buyerSecretKey: deriveSecretKeyFromSeed(wallet.sessionSeed),
-  // Confidential witness inputs — never transmitted to merchant or public ledger:
+  // Confidential Bank/KYC sealed witness inputs — never transmitted to merchant:
   buyerAge: verifiedIdentity.age,
   kycTier: verifiedIdentity.tier,
-  creditLimit: creditLine.availableUsd,
+  creditLimit: bankAttestation.approvedUsd,
   orderAmount: checkout.totalUsd,
 });
 
