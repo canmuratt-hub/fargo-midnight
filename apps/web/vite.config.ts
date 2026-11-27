@@ -30,6 +30,7 @@ function onchainRuntimeV3ShimPlugin(): Plugin {
 }
 
 export default defineConfig({
+  base: process.env.GITHUB_PAGES === "true" ? "/fargo-midnight/" : "/",
   plugins: [onchainRuntimeV3ShimPlugin(), wasm(), react()],
   define: {
     global: "globalThis",

@@ -337,23 +337,23 @@
         <span class="slide-num">05 / 08</span>
       </div>
       <div>
-        <h2>Production-Grade Implementation & 22 Automated Tests</h2>
+        <h2>Production-Grade Implementation & 25 Automated Tests</h2>
         <div class="grid-3">
           <div class="box">
-            <h3>4 Compiled ZK Circuits</h3>
+            <h3>6 Compiled ZK Circuits</h3>
             <p>
+              <span class="mono">register_trusted_issuer</span>,
+              <span class="mono">issue_buyer_credential</span>,
               <span class="mono">register_merchant_policy</span>,
-              <span class="mono">deactivate_merchant_policy</span>,
-              <span class="mono">verify_commerce_order</span>, and
-              <span class="mono">settle_verified_order</span> compiled via
+              <span class="mono">verify_commerce_order</span> &amp; settlement via
               <span class="mono">compactc 0.30.0</span>.
             </p>
           </div>
           <div class="box">
-            <h3>22/22 Passing Specs</h3>
+            <h3>25/25 Passing Specs</h3>
             <p>
-              17 Compact circuit unit, boundary, privacy-audit & 15-order stress
-              tests + 5 live HTTP REST Gateway & HMAC webhook tests.
+              19 Compact circuit unit, Bank-seal anti-tamper, boundary &amp; stress
+              tests + 6 live HTTP REST Gateway, certificate &amp; webhook tests.
             </p>
           </div>
           <div class="box">
@@ -455,10 +455,11 @@
           Explore the compiled Compact contract, run all 22 automated tests, and
           test live zero-knowledge commerce attestations today:
         </p>
-        <div class="box" style="margin-top: 22px; max-width: 680px">
+        <div class="box" style="margin-top: 22px; max-width: 720px">
           <p class="mono" style="color: var(--ink)">
+            Live Demo:  https://canmuratt-hub.github.io/fargo-midnight/<br />
             Repository: https://github.com/canmuratt-hub/fargo-midnight<br />
-            Quick Start: npm install && npm test && npm run dev
+            Quick Start: npm install &amp;&amp; npm test &amp;&amp; npm run dev
           </p>
         </div>
       </div>

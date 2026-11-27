@@ -659,3 +659,152 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Storefront Product Showcase & Modals */
+.storefront-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.product-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  box-shadow: 0 1px 3px rgba(25, 22, 21, 0.03);
+}
+
+.product-price-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+}
+
+.product-price-val {
+  font-family: var(--font-serif);
+  font-size: 2.1rem;
+  color: var(--ink-primary);
+  line-height: 1;
+}
+
+.tamper-banner {
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--crimson-tint);
+  border: 1px solid var(--crimson-border);
+  color: var(--crimson);
+  font-size: 0.79rem;
+  font-weight: 600;
+}
+
+/* Modal Backdrop & Dialog (3D-Secure Popup + Certificate) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(25, 22, 21, 0.56);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--ink-primary);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  box-shadow: 0 20px 50px rgba(25, 22, 21, 0.22);
+}
+
+.modal-dialog.cert-dialog {
+  max-width: 660px;
+  background: #faf7f0;
+  border: 2px solid var(--crimson);
+}
+
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 18px 0;
+}
+
+.step-item {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+}
+
+.step-item.done {
+  background: var(--forest-tint);
+  border-color: var(--forest-border);
+}
+
+.step-item-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-item-sub {
+  font-size: 0.76rem;
+  color: var(--ink-secondary);
+  margin-top: 3px;
+}
+
+.cert-table {
+  margin: 16px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.cert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: 0.79rem;
+}
+
+.cert-row:last-child {
+  border-bottom: none;
+}
+
+.cert-guarantee {
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+  background: var(--bg-subtle);
+  border-left: 3px solid var(--forest);
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  line-height: 1.55;
+}
+
+@media (max-width: 980px) {
+  .storefront-grid {
+    grid-template-columns: 1fr;
+  }
+}

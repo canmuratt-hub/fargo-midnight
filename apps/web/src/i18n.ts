@@ -19,25 +19,63 @@ export const UI_COPY = {
     metricVerifiedSub: "Zero PII or invoice values exposed",
     metricSettledLabel: "Settled Transactions",
     metricSettledSub: "Authenticated via owner ZK key",
-    metricNullifiersLabel: "Spent Replay Nullifiers",
+    metricNullifiersLabel: "Bank Seals / Nullifiers",
     metricNullifiersSubPrefix: "Contract",
 
     // Navigation & Presets
+    tabStorefront: "Live Storefront Demo",
     tabCheckout: "Checkout & Ledger Audit",
     tabPolicies: "Merchant Policy Rules",
     tabSdk: "Plugin & REST Gateway",
     presetsLabel: "Test Presets:",
-    presetMarketplace: "1. Marketplace Laptop Credit ($1,500)",
-    presetFactory: "2. Textile Mill 60-Day Credit ($60,000)",
+    presetMarketplace: "1. Marketplace Laptop ($1,500)",
+    presetFactory: "2. Textile Mill Credit ($60,000)",
     presetB2B: "3. B2B Net-30 ($72,000)",
     presetRetail: "4. Regulated Retail (21+)",
     presetDecline: "5. Over Credit Limit (Decline)",
+    presetTamper: "6. Tamper Bank Seal (Fraud Reject)",
+
+    // Storefront Live Demo Tab
+    sfRetailEyebrow: "Customer Checkout Experience · B2C",
+    sfRetailStore: "TrendPazar Electronics",
+    sfRetailTitle: '16" ProBook Studio Laptop — M4 Pro / 32GB RAM',
+    sfRetailDesc:
+      "Experience how an everyday shopper uses Installment Shopping Credit without sharing their national ID, birthdate, or bank balance with the seller.",
+    sfRetailPriceLabel: "Installment Total",
+    sfRetailRuleBadge: "Requires: Age 18+ · Verified ID · $2,000 Credit",
+    sfRetailPayBtn: "Verify Privately with FARGO & Complete Order",
+
+    sfB2bEyebrow: "Wholesale Procurement Experience · B2B",
+    sfB2bStore: "Bursa Organized Textile Mill",
+    sfB2bTitle: "Wholesale Combed Cotton Fabric — 12 Metric Tons",
+    sfB2bDesc:
+      "Experience how a garment manufacturer orders on 60-day open account by proving their $50,000+ bank guarantee without revealing corporate bank balances.",
+    sfB2bPriceLabel: "60-Day Open Account Invoice",
+    sfB2bRuleBadge: "Requires: Corporate Tax ID (Tier 2) · $50k Bank Seal",
+    sfB2bPayBtn: "Prove Bank Solvency with FARGO & Place Order",
+
+    // 3D-Secure / iyzico Style Popup Modal
+    modalHeaderBadge: "FARGO SECURE ZK CHECKOUT",
+    modalStep1Title: "1. Bank & Official Identity Seal Loaded",
+    modalStep1Sub:
+      "Cryptographic authority signature verified locally on your device.",
+    modalStep2Title: "2. Zero-Knowledge Compact Proof Generated",
+    modalStep2Sub:
+      "Exact age, identity number, and bank balance stripped — 0 bytes sent to seller.",
+    modalStep3Title: "3. Midnight Public Ledger Attestation",
+    modalStep3Sub: "Unforgeable commitment & anti-replay nullifier recorded.",
+    modalConfirmBtn: "Approve & Send ZK Proof to Merchant",
+    modalProcessing: "Generating Midnight ZK Proof…",
+    modalSuccessTitle: "Order Approved Without Data Exposure!",
+    modalViewCertBtn: "Open Official ZK Certificate",
+    modalInspectLedgerBtn: "Inspect in Dual-Ledger Console",
+    modalCloseBtn: "Close Window",
 
     // Tab 1 Left: Buyer Checkout
     buyerEyebrow: "01 · Buyer Session",
     buyerTitle: "Storefront Checkout — FARGO Compliance Plugin",
     buyerDesc:
-      "Proves buyer eligibility and credit solvency inside a local Compact circuit before transmitting only a sealed commitment.",
+      "Proves Bank/KYC seal authenticity, buyer eligibility, and credit solvency inside a local Compact circuit.",
     localWitnessTag: "Local Witness",
     defaultSampleItem: "Enterprise Commercial Purchase Order",
     defaultSampleTerms: "Verified via Midnight Selective Disclosure",
@@ -51,6 +89,8 @@ export const UI_COPY = {
     agePrefix: "Age",
     tierPrefix: "KYC/KYB Tier",
     creditFloorPrefix: "Credit Floor",
+    tamperWarningBanner:
+      "FRAUD SIMULATION ACTIVE: Official Bank Seal is $30,000, but buyer edited input to $100,000. Compact circuit will detect seal mismatch!",
     vaultHeader: "Confidential Buyer Credentials (Never Sent to Merchant)",
     verifiedAgeLabel: "Verified Age",
     kycCredentialLabel: "Hybrid Identity Credential",
@@ -78,17 +118,34 @@ export const UI_COPY = {
     rowInvoiceAmount: "Invoice Dollar Amount",
     redactedWord: "REDACTED",
     publicBoxTitle: "Public Ledger (Disclosed)",
-    rowPolicyProof: "Policy Proof",
+    rowPolicyProof: "Policy & Bank Seal",
     validatedWord: "VALIDATED",
     rowPseudonym: "Pseudonym",
     rowCommitment: "Commitment",
     rowNullifier: "Nullifier",
     recordsListTitle: "Verified Ledger Attestations",
+    certBtn: "Certificate",
     settleOrderBtn: "Settle Order",
     statusVerified: "VERIFIED",
     statusSettled: "SETTLED",
     statusActive: "ACTIVE",
     statusPaused: "PAUSED",
+
+    // Certificate Modal
+    certModalEyebrow: "OFFICIAL CRYPTOGRAPHIC AUDIT RECEIPT",
+    certModalTitle: "Midnight Zero-Knowledge Compliance Certificate",
+    certIdLabel: "Certificate ID",
+    certOrderLabel: "Order Reference",
+    certMerchantLabel: "Counterparty",
+    certStatusLabel: "Ledger Status",
+    certCommitmentLabel: "Order Commitment Hash",
+    certNullifierLabel: "Anti-Replay Nullifier",
+    certPseudonymLabel: "Unlinkable Buyer Pseudonym",
+    certBankSealLabel: "Bank / KYC Authority Seal",
+    certGuaranteeText:
+      "This document certifies that the above commercial transaction satisfied all age, identity, and credit solvency constraints inside a compiled Midnight Compact v0.22 zero-knowledge circuit with zero personal or financial raw data disclosed (GDPR & KVKK compliant).",
+    certDownloadJsonBtn: "Download JSON Receipt",
+    certPrintBtn: "Print / Save PDF",
 
     // Tab 2: Policies
     govEyebrow: "Governance & Compliance",
@@ -120,9 +177,9 @@ export const UI_COPY = {
     arch1Title: "1. Drop-In Storefront & REST Gateway",
     arch1Body:
       "Exposes both a TypeScript SDK (@fargo/sdk) and a standalone HTTP Gateway (POST /v1/orders/verify) returning HMAC-SHA256 signed compliance webhooks.",
-    arch2Title: "2. Hybrid Identity & Credit Solvency Witnesses",
+    arch2Title: "2. Bank-Sealed Hybrid Identity & Solvency",
     arch2Body:
-      "Bridges off-chain KYC/KYB credentials and corporate credit lines into private Compact witnesses — proving policy compliance with zero raw data exposure.",
+      "Verifies cryptographic Bank and KYC authority seals inside Compact circuits — preventing buyer input tampering with zero raw data exposure.",
     arch3Title: "3. Unlinkable Pseudonyms & Replay Protection",
     arch3Body:
       "Derives merchant-scoped pseudonyms so buyers cannot be tracked across platforms, while deterministic nullifiers block order replay attacks on-chain.",
@@ -143,10 +200,11 @@ export const UI_COPY = {
     metricVerifiedSub: "0 bayt kimlik veya fatura tutarı sızdırıldı",
     metricSettledLabel: "Onaylanıp Kapatılan İşlem",
     metricSettledSub: "Satıcı özel ZK anahtarıyla mühürlendi",
-    metricNullifiersLabel: "Tek Kullanımlık Koruma Damgası",
+    metricNullifiersLabel: "Banka Mührü / Koruma Damgası",
     metricNullifiersSubPrefix: "Sözleşme",
 
     // Navigation & Presets
+    tabStorefront: "Canlı Mağaza Deneyimi",
     tabCheckout: "Ödeme & Blokzincir Denetimi",
     tabPolicies: "Mağaza Kural Yönetimi",
     tabSdk: "Eklenti & REST API Kapısı",
@@ -156,12 +214,49 @@ export const UI_COPY = {
     presetB2B: "3. B2B Vadeli Alım ($72,000)",
     presetRetail: "4. Yaş Sınırlı Perakende (21+)",
     presetDecline: "5. Kredi Limiti Aşımı (Reddet)",
+    presetTamper: "6. Hile Dene: Sahte Banka Limiti (Reddet)",
+
+    // Storefront Live Demo Tab
+    sfRetailEyebrow: "Bireysel Müşteri Sepet Deneyimi · B2C",
+    sfRetailStore: "TrendPazar Elektronik",
+    sfRetailTitle: '16" ProBook Studio Laptop — M4 Pro / 32GB RAM',
+    sfRetailDesc:
+      "Müşterinin TC kimlik numarasını, yaşını veya banka hesabını satıcıyla paylaşmadan 'Alışveriş Kredisi' ile nasıl saniyeler içinde sipariş verdiğini canlı deneyin.",
+    sfRetailPriceLabel: "Alışveriş Kredili Tutar",
+    sfRetailRuleBadge: "Şartlar: 18+ Yaş · e-Devlet Kimlik · $2,000 Limit",
+    sfRetailPayBtn: "FARGO ile Gizli Doğrula & Siparişi Tamamla",
+
+    sfB2bEyebrow: "Toptan Fabrika Alım Deneyimi · B2B",
+    sfB2bStore: "Bursa Organize Kumaş Fabrikası",
+    sfB2bTitle: "Toptan Penye Pamuk Kumaş — 12 Ton Sevkiyat",
+    sfB2bDesc:
+      "Bir tekstil atölyesinin kasasındaki parayı fabrikaya göstermeden, $50.000 üstü banka teminatına sahip olduğunu kanıtlayarak 60 gün vadeli mal alışını deneyin.",
+    sfB2bPriceLabel: "60 Gün Açık Hesap Fatura",
+    sfB2bRuleBadge: "Şartlar: Vergi Levhalı Şirket · $50,000 Banka Mührü",
+    sfB2bPayBtn: "FARGO ile Banka Teminatını Kanıtla & Sipariş Ver",
+
+    // 3D-Secure / iyzico Style Popup Modal
+    modalHeaderBadge: "FARGO GÜVENLİ ZK DOĞRULAMA PENCERESİ",
+    modalStep1Title: "1. e-Devlet ve Banka Dijital Mührü Okundu",
+    modalStep1Sub:
+      "Resmi kurum imzası telefonunuzda/tarayıcınızda yerel olarak doğrulandı.",
+    modalStep2Title: "2. Sıfır-Bilgi (ZK) Compact Kanıtı Hazırlandı",
+    modalStep2Sub:
+      "Yaşınız, TC kimliğiniz ve banka bakiyeniz gizlendi — satıcıya 0 bayt gönderilir.",
+    modalStep3Title: "3. Midnight Blokzincir Onay Mührü",
+    modalStep3Sub: "Taklit edilemez sipariş mührü ve kopya önleyici damga üretilir.",
+    modalConfirmBtn: "Onayla ve ZK Mührünü Satıcıya Gönder",
+    modalProcessing: "Midnight ZK Kanıtı Üretiliyor…",
+    modalSuccessTitle: "Verileriniz Paylaşılmadan Sipariş Onaylandı!",
+    modalViewCertBtn: "Resmi ZK Sertifikasını Gör",
+    modalInspectLedgerBtn: "Blokzincir Kaydını İncele",
+    modalCloseBtn: "Pencereyi Kapat",
 
     // Tab 1 Left: Buyer Checkout
     buyerEyebrow: "01 · Alıcı (Müşteri) Ekranı",
     buyerTitle: "Mağaza Ödeme Adımı — FARGO Uyumluluk Eklentisi",
     buyerDesc:
-      "Alıcının yaş, kimlik ve kredi uygunluğunu cihaz içindeki Compact devresinde kanıtlar; karşı tarafa yalnızca şifreli mühür gönderir.",
+      "Banka/e-Devlet dijital mührünü, yaş ve kredi uygunluğunu cihaz içindeki Compact devresinde doğrular; karşı tarafa yalnızca şifreli mühür gönderir.",
     localWitnessTag: "Yerel Gizli Tanık",
     defaultSampleItem: "Kurumsal Ticari Satın Alma Siparişi",
     defaultSampleTerms: "Midnight Seçici Bilgi Paylaşımı ile Doğrulanır",
@@ -175,6 +270,8 @@ export const UI_COPY = {
     agePrefix: "En Az Yaş",
     tierPrefix: "Kimlik Seviyesi",
     creditFloorPrefix: "Min. Kredi Limiti",
+    tamperWarningBanner:
+      "HİLE SİMÜLASYONU AKTİF: Bankanın gerçek mührü $30,000 iken alıcı kutuya yalandan $100,000 yazdı! Compact sözleşmesi sahte veriyi yakalayacak.",
     vaultHeader: "Alıcının Gizli Bilgileri (Satıcıya Asla Gönderilmez)",
     verifiedAgeLabel: "Müşterinin Gerçek Yaşı",
     kycCredentialLabel: "Hibrit Kimlik (KYC/KYB) Seviyesi",
@@ -189,7 +286,7 @@ export const UI_COPY = {
     merchantEyebrow: "02 · Satıcı & Blokzincir Ekranı",
     merchantTitle: "Midnight Çift-Defter Denetimi & Satıcı Onayı",
     merchantDesc:
-      "Satıcı müşterinin özel rakamlarını görmez (GİZLENDİ); ancak tüm kuralların sağlandığını matematiksel olarak doğrulayıp siparişi onaylar.",
+      "Satıcı müşterinin özel rakamlarını görmez (GİZLENDİ); ancak tüm kuralların ve banka mührünün gerçek olduğunu doğrulayıp siparişi onaylar.",
     hideWebhookBtn: "Webhook Gizle",
     inspectWebhookBtn: "İmzalı Webhook'u Gör",
     attRecordedPrefix: "ZK Kanıtı Onaylandı",
@@ -202,17 +299,34 @@ export const UI_COPY = {
     rowInvoiceAmount: "Fatura Dolar Tutarı",
     redactedWord: "GİZLENDİ",
     publicBoxTitle: "Blokzincire Yazılan (Açık Kanıt)",
-    rowPolicyProof: "Kural Uygunluğu",
+    rowPolicyProof: "Kural & Banka Mührü",
     validatedWord: "DOĞRULANDI",
     rowPseudonym: "Anonim Alıcı Kodu",
     rowCommitment: "Şifreli Sipariş Mührü",
     rowNullifier: "Kopya Önleyici Damga",
     recordsListTitle: "Doğrulanmış Blokzincir Kayıtları",
+    certBtn: "Sertifika",
     settleOrderBtn: "Siparişi Onayla (Satıcı)",
     statusVerified: "DOĞRULANDI",
     statusSettled: "KAPATILDI",
     statusActive: "AKTİF",
     statusPaused: "DURAKLATILDI",
+
+    // Certificate Modal
+    certModalEyebrow: "RESMİ KRİPTOGRAFİK DENETİM BELGESİ",
+    certModalTitle: "Midnight Sıfır-Bilgi (ZK) Uyumluluk Sertifikası",
+    certIdLabel: "Sertifika No",
+    certOrderLabel: "Sipariş Referansı",
+    certMerchantLabel: "Satıcı Kurum",
+    certStatusLabel: "Blokzincir Durumu",
+    certCommitmentLabel: "Sipariş Mühür Özeti (Commitment)",
+    certNullifierLabel: "Tekrar Önleyici Damga (Nullifier)",
+    certPseudonymLabel: "Takip Edilemez Alıcı Kodu",
+    certBankSealLabel: "Banka / e-Devlet Otorite Mührü",
+    certGuaranteeText:
+      "Bu belge; yukarıdaki ticari işlemin yaş, kimlik ve banka kredi yeterliliği şartlarının Midnight Compact v0.22 sıfır-bilgi devresi içinde eksiksiz doğrulandığını ve satıcıya hiçbir kişisel/finansal ham veri aktarılmadığını (KVKK & GDPR uyumlu) teyit eder.",
+    certDownloadJsonBtn: "JSON Dekont İndir",
+    certPrintBtn: "Yazdır / PDF Kaydet",
 
     // Tab 2: Policies
     govEyebrow: "Mağaza Yönetimi & Uyumluluk",
@@ -244,9 +358,9 @@ export const UI_COPY = {
     arch1Title: "1. Tak-Çalıştır Mağaza SDK & REST API",
     arch1Body:
       "Hem TypeScript SDK (@fargo/sdk) hem de HMAC-SHA256 imzalı bildirim (Webhook) üreten bağımsız HTTP sunucusu (POST /v1/orders/verify) sunar.",
-    arch2Title: "2. Hibrit Kimlik & Kredi Yeterliliği Kanıtı",
+    arch2Title: "2. Banka Mühürlü Hibrit Kimlik & Kredi Kanıtı",
     arch2Body:
-      "Zincir dışı KYC/KYB belgelerini ve banka kredi limitlerini yerel Compact gizli tanıklarına bağlar; ham veriyi sızdırmadan kuralları doğrular.",
+      "Banka ve resmi kurum mühürlerini doğrudan Compact ZK devresi içinde doğrular; müşterinin sahte veri girmesini matematiksel olarak engeller.",
     arch3Title: "3. Takip Edilemez Kimlik & Kopya Koruması",
     arch3Body:
       "Her mağaza için farklı anonim alıcı kodu üreterek fişlenmeyi önler; tek kullanımlık Nullifier damgasıyla aynı siparişin tekrar kullanılmasını engeller.",

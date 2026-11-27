@@ -6,7 +6,9 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-9e2323.svg)](./LICENSE)
 [![Network: Midnight](https://img.shields.io/badge/Network-Midnight-191615.svg)](https://midnight.network/)
 [![Language: Compact v0.22](https://img.shields.io/badge/Compact-compactc_0.30.0-1f5138.svg)](https://docs.midnight.network/)
-[![Tests: 22 Passing](https://img.shields.io/badge/Tests-22%2F22_Passing-1f5138.svg)](#2-run-simulation-qa--gateway-tests-22-test-cases)
+[![Tests: 25 Passing](https://img.shields.io/badge/Tests-25%2F25_Passing-1f5138.svg)](#2-run-simulation-qa--gateway-tests-25-test-cases)
+
+**Live Interactive Demo:** [https://canmuratt-hub.github.io/fargo-midnight/](https://canmuratt-hub.github.io/fargo-midnight/)
 
 ---
 
@@ -110,12 +112,12 @@ npm install
 npm run build
 ```
 
-### 2. Run Simulation, QA & Gateway Tests (22 Test Cases)
+### 2. Run Simulation, QA & Gateway Tests (25 Test Cases)
 ```bash
 npm test
 ```
-- **17 Compact contract tests** (`@fargo/contract`): policy registration, ZK owner authentication, unauthorized hijack protection, B2B credit solvency verification, unlinkable per-merchant pseudonyms, commitment hiding, exact/off-by-one boundary checks, policy pause/resume lifecycle, zero-leakage privacy audit, and a 15-order multi-merchant stress test.
-- **5 SDK, Webhook & HTTP Gateway tests** (`@fargo/sdk`): full commerce lifecycle, HMAC-SHA256 webhook signing/tamper detection, and live HTTP REST endpoint tests (`GET /v1/health`, `POST /v1/policies`, `POST /v1/orders/verify`, `POST /v1/orders/settle`, `GET /v1/ledger`).
+- **19 Compact contract tests** (`@fargo/contract`): trusted Bank/KYC authority registration, cryptographic credential seal issuance, anti-tamper fraud rejection (`Tampered or unverified bank/KYC credential seal`), policy registration, ZK owner authentication, B2B credit solvency verification, unlinkable per-merchant pseudonyms, exact/off-by-one boundary checks, zero-leakage privacy audit, and a 15-order multi-merchant stress test.
+- **6 SDK, Certificate, Webhook & HTTP Gateway tests** (`@fargo/sdk`): full commerce lifecycle, buyer input tampering detection, GDPR/KVKK compliance certificate generation, HMAC-SHA256 webhook signing, and live HTTP REST endpoint tests (`GET /v1/health`, `POST /v1/policies`, `POST /v1/orders/verify`, `POST /v1/orders/settle`, `GET /v1/ledger`).
 
 ### 3. Launch the Interactive Web Application
 ```bash

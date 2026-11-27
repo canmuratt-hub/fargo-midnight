@@ -1,4 +1,5 @@
 import {
+  type ComplianceCertificate,
   FargoCommerceClient,
   type DualLedgerSnapshot,
   type FargoVerificationOutcome,
@@ -9,30 +10,37 @@ import {
 } from "@fargo/sdk";
 import {
   ArrowRight,
+  Award,
   Building2,
   Check,
+  CheckCircle2,
   Code2,
   Copy,
+  Download,
   EyeOff,
   FileCheck2,
   KeyRound,
+  Laptop,
   Lock,
   ShieldAlert,
   ShieldCheck,
+  ShoppingBag,
   SlidersHorizontal,
   Wallet,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { type Locale, UI_COPY } from "./i18n";
 
-type ActiveTab = "checkout" | "policies" | "sdk";
+type ActiveTab = "storefront" | "checkout" | "policies" | "sdk";
 type SdkPlatform = "shopify" | "woocommerce" | "erp-rest";
 type PresetId =
   | "marketplace-laptop"
   | "factory-textile"
   | "b2b-valid"
   | "retail-valid"
-  | "credit-fail";
+  | "credit-fail"
+  | "bank-tamper";
 type WalletStateKey =
   | "walletDefault"
   | "walletLaceConnected"
@@ -62,9 +70,9 @@ const DEFAULT_MERCHANTS: readonly MerchantAccount[] = [
     minAge: 18,
     requiredKycTier: 1,
     minCreditLimit: 2_000,
-    sampleItemEn: "Order #TP-904 — 16\" ProBook Laptop (Installment Checkout)",
+    sampleItemEn: 'Order #TP-904 — 16" ProBook Laptop (Installment Checkout)',
     sampleItemTr:
-      "Sipariş #TP-904 — 16\" Dizüstü Bilgisayar (Alışveriş Kredisi ile)",
+      'Sipariş #TP-904 — 16" Dizüstü Bilgisayar (Alışveriş Kredisi ile)',
     sampleTermsEn:
       "Buy-Now-Pay-Later Credit · Min Age 18+ · Verified ID (Tier 1) · $2,000 Credit Floor",
     sampleTermsTr:
@@ -146,6 +154,12 @@ function createSeededClient(): FargoCommerceClient {
   return client;
 }
 
+interface StorefrontModalState {
+  readonly mode: "retail" | "b2b";
+  readonly step: "ready" | "approved";
+  readonly outcome?: FargoVerificationOutcome;
+}
+
 export function App() {
   const client = useMemo(() => createSeededClient(), []);
   const [locale, setLocale] = useState<Locale>("en");
@@ -160,7 +174,14 @@ export function App() {
   const [walletStateKey, setWalletStateKey] =
     useState<WalletStateKey>("walletDefault");
 
-  // Default to Scenario 1 (Marketplace Laptop Credit) on open
+  // Storefront Popup & Certificate Modals
+  const [popupState, setPopupState] = useState<StorefrontModalState | null>(
+    null,
+  );
+  const [activeCertificate, setActiveCertificate] =
+    useState<ComplianceCertificate | null>(null);
+
+  // Checkout Witness Form State
   const [merchantSlug, setMerchantSlug] = useState<string>(
     "trendpazar-shopping-credit",
   );
@@ -169,6 +190,7 @@ export function App() {
   const [buyerAge, setBuyerAge] = useState<number>(24);
   const [kycTier, setKycTier] = useState<KycTierLevel>(1);
   const [creditLimit, setCreditLimit] = useState<number>(3_500);
+  const [bankSealedLimit, setBankSealedLimit] = useState<number | null>(null);
   const [orderAmount, setOrderAmount] = useState<number>(1_500);
   const [lastOutcome, setLastOutcome] =
     useState<FargoVerificationOutcome | null>(null);
@@ -231,6 +253,7 @@ export function App() {
   function applyPreset(preset: PresetId) {
     setActiveTab("checkout");
     setShowWebhookModal(false);
+    setBankSealedLimit(null);
     const suffix = Math.floor(1000 + Math.random() * 8999);
     if (preset === "marketplace-laptop") {
       setMerchantSlug("trendpazar-shopping-credit");
@@ -264,7 +287,7 @@ export function App() {
       setKycTier(1);
       setCreditLimit(12_000);
       setOrderAmount(1_450);
-    } else {
+    } else if (preset === "credit-fail") {
       setMerchantSlug("bursa-textile-mill");
       setOrderNumber(`PO-DECLINE-${suffix}`);
       setBuyerSeed("buyer:under-limit-account");
@@ -272,7 +295,69 @@ export function App() {
       setKycTier(2);
       setCreditLimit(40_000);
       setOrderAmount(95_000);
+    } else {
+      // Bank Seal Fraud / Tamper Simulation!
+      setMerchantSlug("bursa-textile-mill");
+      setOrderNumber(`FAB-FRAUD-${suffix}`);
+      setBuyerSeed("buyer:tampering-attempt");
+      setBuyerAge(33);
+      setKycTier(2);
+      setCreditLimit(100_000); // Buyer falsely claims $100k
+      setBankSealedLimit(30_000); // Official Bank seal is only $30k!
+      setOrderAmount(60_000);
     }
+  }
+
+  function handleOpenStorefrontPopup(mode: "retail" | "b2b"): void {
+    setPopupState({ mode, step: "ready" });
+  }
+
+  function handleApproveStorefrontPopup(): void {
+    if (!popupState) return;
+    const suffix = Math.floor(1000 + Math.random() * 8999);
+    const outcome =
+      popupState.mode === "retail"
+        ? client.verifyCheckoutOrder({
+            buyerSecretKey: deriveSecretKeyFromSeed("buyer:storefront-shopper"),
+            merchantSlug: "trendpazar-shopping-credit",
+            orderNumber: `TP-LIVE-${suffix}`,
+            buyerAge: 26,
+            kycTier: 1,
+            creditLimit: 4_500,
+            orderAmount: 1_500,
+          })
+        : client.verifyCheckoutOrder({
+            buyerSecretKey: deriveSecretKeyFromSeed("buyer:storefront-mill"),
+            merchantSlug: "bursa-textile-mill",
+            orderNumber: `FAB-LIVE-${suffix}`,
+            buyerAge: 41,
+            kycTier: 2,
+            creditLimit: 150_000,
+            orderAmount: 60_000,
+          });
+
+    setLastOutcome(outcome);
+    refreshLedger();
+    setPopupState({ ...popupState, step: "approved", outcome });
+  }
+
+  function openCertificateForOrder(targetOrderNum: string): void {
+    const cert = client.generateComplianceCertificate(targetOrderNum);
+    if (cert) {
+      setActiveCertificate(cert);
+    }
+  }
+
+  function handleDownloadCertificateJson(cert: ComplianceCertificate): void {
+    const blob = new Blob([JSON.stringify(cert, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cert.certificateId}-${cert.orderNumber}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handleVerifyOrder(e: React.FormEvent): Promise<void> {
@@ -284,6 +369,7 @@ export function App() {
       buyerAge,
       kycTier,
       creditLimit,
+      bankSealedCreditLimit: bankSealedLimit ?? undefined,
       orderAmount,
     });
     setLastOutcome(outcome);
@@ -438,7 +524,9 @@ export function App() {
         </div>
         <div className="metric-cell">
           <div className="metric-label">{t.metricNullifiersLabel}</div>
-          <div className="metric-value">{ledgerView.activeNullifierCount}</div>
+          <div className="metric-value">
+            {ledgerView.totalCredentialsIssued} / {ledgerView.activeNullifierCount}
+          </div>
           <div className="metric-sub">
             {t.metricNullifiersSubPrefix} {shortHex(ledgerView.contractAddress)}
           </div>
@@ -448,6 +536,13 @@ export function App() {
       {/* Navigation & Quick Presets */}
       <div className="toolbar-row">
         <nav className="nav-tabs" aria-label="Workspace Sections">
+          <button
+            type="button"
+            className={`nav-tab ${activeTab === "storefront" ? "active" : ""}`}
+            onClick={() => setActiveTab("storefront")}
+          >
+            <ShoppingBag size={15} /> {t.tabStorefront}
+          </button>
           <button
             type="button"
             className={`nav-tab ${activeTab === "checkout" ? "active" : ""}`}
@@ -471,45 +566,167 @@ export function App() {
           </button>
         </nav>
 
-        <div className="scenario-group">
-          <span className="scenario-label">{t.presetsLabel}</span>
-          <button
-            type="button"
-            className="scenario-chip"
-            onClick={() => applyPreset("marketplace-laptop")}
-          >
-            {t.presetMarketplace}
-          </button>
-          <button
-            type="button"
-            className="scenario-chip"
-            onClick={() => applyPreset("factory-textile")}
-          >
-            {t.presetFactory}
-          </button>
-          <button
-            type="button"
-            className="scenario-chip"
-            onClick={() => applyPreset("b2b-valid")}
-          >
-            {t.presetB2B}
-          </button>
-          <button
-            type="button"
-            className="scenario-chip"
-            onClick={() => applyPreset("retail-valid")}
-          >
-            {t.presetRetail}
-          </button>
-          <button
-            type="button"
-            className="scenario-chip danger-chip"
-            onClick={() => applyPreset("credit-fail")}
-          >
-            {t.presetDecline}
-          </button>
-        </div>
+        {activeTab === "checkout" && (
+          <div className="scenario-group">
+            <span className="scenario-label">{t.presetsLabel}</span>
+            <button
+              type="button"
+              className="scenario-chip"
+              onClick={() => applyPreset("marketplace-laptop")}
+            >
+              {t.presetMarketplace}
+            </button>
+            <button
+              type="button"
+              className="scenario-chip"
+              onClick={() => applyPreset("factory-textile")}
+            >
+              {t.presetFactory}
+            </button>
+            <button
+              type="button"
+              className="scenario-chip"
+              onClick={() => applyPreset("b2b-valid")}
+            >
+              {t.presetB2B}
+            </button>
+            <button
+              type="button"
+              className="scenario-chip"
+              onClick={() => applyPreset("retail-valid")}
+            >
+              {t.presetRetail}
+            </button>
+            <button
+              type="button"
+              className="scenario-chip danger-chip"
+              onClick={() => applyPreset("credit-fail")}
+            >
+              {t.presetDecline}
+            </button>
+            <button
+              type="button"
+              className="scenario-chip danger-chip"
+              onClick={() => applyPreset("bank-tamper")}
+            >
+              {t.presetTamper}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* TAB 0: LIVE STOREFRONT EXPERIENCE (3D-Secure / iyzico Popup Showcase) */}
+      {activeTab === "storefront" && (
+        <main className="storefront-grid">
+          {/* Card A: Retail Laptop Checkout */}
+          <section className="product-card">
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <span className="eyebrow">{t.sfRetailEyebrow}</span>
+                <span className="tag tag-witness">
+                  <Laptop size={12} /> {t.sfRetailStore}
+                </span>
+              </div>
+              <h2 className="card-title" style={{ fontSize: "1.25rem" }}>
+                {t.sfRetailTitle}
+              </h2>
+              <p className="card-desc" style={{ marginTop: 8 }}>
+                {t.sfRetailDesc}
+              </p>
+            </div>
+
+            <div>
+              <div className="product-price-box">
+                <div>
+                  <div className="metric-label">{t.sfRetailPriceLabel}</div>
+                  <div
+                    style={{
+                      fontSize: "0.77rem",
+                      color: "var(--crimson)",
+                      fontWeight: 600,
+                      marginTop: 4,
+                    }}
+                  >
+                    {t.sfRetailRuleBadge}
+                  </div>
+                </div>
+                <div className="product-price-val">$1,500</div>
+              </div>
+
+              <button
+                type="button"
+                className="btn-crimson"
+                onClick={() => handleOpenStorefrontPopup("retail")}
+              >
+                <Lock size={16} />
+                {t.sfRetailPayBtn}
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </section>
+
+          {/* Card B: B2B Textile Factory Checkout */}
+          <section className="product-card">
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <span className="eyebrow">{t.sfB2bEyebrow}</span>
+                <span className="tag tag-witness">
+                  <Building2 size={12} /> {t.sfB2bStore}
+                </span>
+              </div>
+              <h2 className="card-title" style={{ fontSize: "1.25rem" }}>
+                {t.sfB2bTitle}
+              </h2>
+              <p className="card-desc" style={{ marginTop: 8 }}>
+                {t.sfB2bDesc}
+              </p>
+            </div>
+
+            <div>
+              <div className="product-price-box">
+                <div>
+                  <div className="metric-label">{t.sfB2bPriceLabel}</div>
+                  <div
+                    style={{
+                      fontSize: "0.77rem",
+                      color: "var(--crimson)",
+                      fontWeight: 600,
+                      marginTop: 4,
+                    }}
+                  >
+                    {t.sfB2bRuleBadge}
+                  </div>
+                </div>
+                <div className="product-price-val">$60,000</div>
+              </div>
+
+              <button
+                type="button"
+                className="btn-crimson"
+                onClick={() => handleOpenStorefrontPopup("b2b")}
+              >
+                <ShieldCheck size={16} />
+                {t.sfB2bPayBtn}
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </section>
+        </main>
+      )}
 
       {/* TAB 1: Live Checkout + Dual-Ledger Audit */}
       {activeTab === "checkout" && (
@@ -554,7 +771,10 @@ export function App() {
                   <select
                     id="merchant-select"
                     value={merchantSlug}
-                    onChange={(e) => setMerchantSlug(e.target.value)}
+                    onChange={(e) => {
+                      setMerchantSlug(e.target.value);
+                      setBankSealedLimit(null);
+                    }}
                   >
                     {ledgerView.policies.map((pol) => (
                       <option key={pol.merchantSlug} value={pol.merchantSlug}>
@@ -610,6 +830,10 @@ export function App() {
                     {Number(selectedPolicy.minCreditLimit).toLocaleString()}
                   </span>
                 </div>
+              )}
+
+              {bankSealedLimit !== null && (
+                <div className="tamper-banner">{t.tamperWarningBanner}</div>
               )}
 
               <div className="witness-vault">
@@ -744,8 +968,8 @@ export function App() {
                     className="mono"
                     style={{ marginTop: 5, fontSize: "0.73rem" }}
                   >
-                    Commitment: {shortHex(lastOutcome.commitmentHex)} · Nullifier:{" "}
-                    {shortHex(lastOutcome.nullifierHex)}
+                    Commitment: {shortHex(lastOutcome.commitmentHex)} · Bank Seal:{" "}
+                    {shortHex(lastOutcome.credentialSealHex)}
                   </div>
                 ) : (
                   <div style={{ marginTop: 5, fontSize: "0.8rem" }}>
@@ -857,7 +1081,14 @@ export function App() {
                         · {att.merchantSlug}
                       </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <span
                         className={`tag ${
                           att.status === "settled"
@@ -870,6 +1101,13 @@ export function App() {
                           ? t.statusSettled
                           : t.statusVerified}
                       </span>
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        onClick={() => openCertificateForOrder(att.orderNumber)}
+                      >
+                        <Award size={12} /> {t.certBtn}
+                      </button>
                       {att.status === "verified" &&
                         merchantSeedsBySlug[att.merchantSlug] && (
                           <button
@@ -888,8 +1126,8 @@ export function App() {
                     </div>
                   </div>
                   <div className="mono" style={{ color: "var(--ink-muted)" }}>
-                    Commit {shortHex(att.commitmentHex)} · Buyer{" "}
-                    {shortHex(att.buyerPseudonymHex)} · Nullifier{" "}
+                    Commit {shortHex(att.commitmentHex)} · Seal{" "}
+                    {shortHex(att.credentialSealHex)} · Nullifier{" "}
                     {shortHex(att.nullifierHex)}
                   </div>
                 </div>
@@ -1156,6 +1394,243 @@ export function App() {
             </div>
           </section>
         </main>
+      )}
+
+      {/* MODAL 1: 3D-Secure / iyzico Style Storefront Verification Popup */}
+      {popupState && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setPopupState(null)}
+          role="presentation"
+        >
+          <div
+            className="modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid var(--border-hairline)",
+                paddingBottom: 12,
+              }}
+            >
+              <span className="brand-edition">{t.modalHeaderBadge}</span>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => setPopupState(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="step-list">
+              <div className="step-item done">
+                <div className="step-item-title">
+                  <CheckCircle2 size={16} color="var(--forest)" />
+                  {t.modalStep1Title}
+                </div>
+                <div className="step-item-sub">{t.modalStep1Sub}</div>
+              </div>
+
+              <div className="step-item done">
+                <div className="step-item-title">
+                  <CheckCircle2 size={16} color="var(--forest)" />
+                  {t.modalStep2Title}
+                </div>
+                <div className="step-item-sub">{t.modalStep2Sub}</div>
+              </div>
+
+              <div
+                className={`step-item ${
+                  popupState.step === "approved" ? "done" : ""
+                }`}
+              >
+                <div className="step-item-title">
+                  {popupState.step === "approved" ? (
+                    <CheckCircle2 size={16} color="var(--forest)" />
+                  ) : (
+                    <Lock size={15} color="var(--crimson)" />
+                  )}
+                  {t.modalStep3Title}
+                </div>
+                <div className="step-item-sub">{t.modalStep3Sub}</div>
+              </div>
+            </div>
+
+            {popupState.step === "ready" ? (
+              <button
+                type="button"
+                className="btn-crimson"
+                style={{ marginTop: 4 }}
+                onClick={handleApproveStorefrontPopup}
+              >
+                <ShieldCheck size={17} />
+                {t.modalConfirmBtn}
+              </button>
+            ) : (
+              <div>
+                <div className="result-banner ok" style={{ marginBottom: 12 }}>
+                  <strong>{t.modalSuccessTitle}</strong>
+                  <div className="mono" style={{ marginTop: 4 }}>
+                    {popupState.outcome?.orderNumber} · Commit{" "}
+                    {shortHex(popupState.outcome?.commitmentHex)}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {popupState.outcome && (
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => {
+                        const ord = popupState.outcome!.orderNumber;
+                        setPopupState(null);
+                        openCertificateForOrder(ord);
+                      }}
+                    >
+                      <Award size={14} /> {t.modalViewCertBtn}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={() => {
+                      setPopupState(null);
+                      setActiveTab("checkout");
+                    }}
+                  >
+                    {t.modalInspectLedgerBtn}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Official Midnight ZK Compliance Certificate */}
+      {activeCertificate && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setActiveCertificate(null)}
+          role="presentation"
+        >
+          <div
+            className="modal-dialog cert-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+              <div>
+                <div className="eyebrow">{t.certModalEyebrow}</div>
+                <h2 className="card-title" style={{ fontSize: "1.2rem" }}>
+                  {t.certModalTitle}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => setActiveCertificate(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="cert-table">
+              <div className="cert-row">
+                <span>{t.certIdLabel}</span>
+                <strong className="mono">
+                  {activeCertificate.certificateId}
+                </strong>
+              </div>
+              <div className="cert-row">
+                <span>{t.certOrderLabel}</span>
+                <strong>{activeCertificate.orderNumber}</strong>
+              </div>
+              <div className="cert-row">
+                <span>{t.certMerchantLabel}</span>
+                <span>{activeCertificate.merchantDisplayName}</span>
+              </div>
+              <div className="cert-row">
+                <span>{t.certStatusLabel}</span>
+                <span className="tag tag-verified">
+                  {activeCertificate.status}
+                </span>
+              </div>
+              <div className="cert-row">
+                <span>{t.certCommitmentLabel}</span>
+                <span className="mono">
+                  {shortHex(
+                    activeCertificate.cryptographicProofs.orderCommitmentHex,
+                  )}
+                </span>
+              </div>
+              <div className="cert-row">
+                <span>{t.certBankSealLabel}</span>
+                <span className="mono">
+                  {shortHex(
+                    activeCertificate.cryptographicProofs.bankCredentialSealHex,
+                  )}
+                </span>
+              </div>
+              <div className="cert-row">
+                <span>{t.certNullifierLabel}</span>
+                <span className="mono">
+                  {shortHex(
+                    activeCertificate.cryptographicProofs
+                      .antiReplayNullifierHex,
+                  )}
+                </span>
+              </div>
+              <div className="cert-row">
+                <span>{t.certPseudonymLabel}</span>
+                <span className="mono">
+                  {shortHex(
+                    activeCertificate.cryptographicProofs.buyerPseudonymHex,
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="cert-guarantee">{t.certGuaranteeText}</div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                marginTop: 16,
+              }}
+            >
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => handleDownloadCertificateJson(activeCertificate)}
+              >
+                <Download size={14} /> {t.certDownloadJsonBtn}
+              </button>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => window.print()}
+              >
+                {t.certPrintBtn}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
