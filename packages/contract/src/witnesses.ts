@@ -14,6 +14,7 @@ export interface FargoPrivateState {
   readonly creditLimit: bigint;
   readonly orderAmount: bigint;
   readonly orderSalt: Uint8Array;
+  readonly credentialSalt: Uint8Array;
   readonly receipts: readonly VerifiedOrderReceipt[];
 }
 
@@ -28,6 +29,7 @@ export function createFargoPrivateState(params: {
   creditLimit?: number | bigint;
   orderAmount?: number | bigint;
   orderSalt?: Uint8Array;
+  credentialSalt?: Uint8Array;
   receipts?: readonly VerifiedOrderReceipt[];
 }): FargoPrivateState {
   if (params.secretKey.length !== 32) {
@@ -37,6 +39,10 @@ export function createFargoPrivateState(params: {
   if (salt.length !== 32) {
     throw new Error("orderSalt must be exactly 32 bytes");
   }
+  const credSalt = params.credentialSalt ?? new Uint8Array(32).fill(0x7c);
+  if (credSalt.length !== 32) {
+    throw new Error("credentialSalt must be exactly 32 bytes");
+  }
   return {
     secretKey: params.secretKey,
     buyerAge: BigInt(params.buyerAge ?? 25),
@@ -44,6 +50,7 @@ export function createFargoPrivateState(params: {
     creditLimit: BigInt(params.creditLimit ?? 50_000n),
     orderAmount: BigInt(params.orderAmount ?? 1_000n),
     orderSalt: salt,
+    credentialSalt: credSalt,
     receipts: params.receipts ?? [],
   };
 }
@@ -74,6 +81,10 @@ export const fargoWitnesses = {
   private_order_salt: (ctx: WitnessCtx): [FargoPrivateState, Uint8Array] => [
     ctx.privateState,
     ctx.privateState.orderSalt,
+  ],
+  private_credential_salt: (ctx: WitnessCtx): [FargoPrivateState, Uint8Array] => [
+    ctx.privateState,
+    ctx.privateState.credentialSalt,
   ],
   record_verified_receipt: (
     ctx: WitnessCtx,

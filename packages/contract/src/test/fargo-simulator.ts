@@ -42,6 +42,8 @@ interface ActorSession {
   zswapState: EncodedZswapLocalState;
 }
 
+const DEFAULT_BANK_ISSUER_SK = new Uint8Array(32).fill(0xfe);
+
 /**
  * Multi-party Midnight Dual-Ledger simulator for FARGO.
  * Maintains isolated private states (witnesses + Zswap local state) per actor
@@ -52,35 +54,85 @@ export class FargoSimulator {
   private readonly actors = new Map<string, ActorSession>();
   private sharedLedgerState: ChargedState;
   public readonly contractAddress = sampleContractAddress();
+  public static readonly DEFAULT_ISSUER_ACTOR = "__defaultBankAuthority";
 
-  constructor() {
+  constructor(registerDefaultBankIssuer = true) {
     this.contract = new Contract<FargoPrivateState>(
       fargoWitnesses as unknown as Witnesses<FargoPrivateState>,
     );
     const bootstrapPs = createFargoPrivateState({
-      secretKey: new Uint8Array(32).fill(0x01),
+      secretKey: DEFAULT_BANK_ISSUER_SK,
     });
     const init = this.contract.initialState(
       createConstructorContext(bootstrapPs, "0".repeat(64)),
     );
     this.sharedLedgerState = init.currentContractState.data;
+
+    if (registerDefaultBankIssuer) {
+      this.upsertActor(FargoSimulator.DEFAULT_ISSUER_ACTOR, bootstrapPs, {
+        autoSealCredential: false,
+      });
+      this.registerTrustedIssuer(FargoSimulator.DEFAULT_ISSUER_ACTOR);
+    }
   }
 
-  public upsertActor(actorName: string, state: FargoPrivateState): void {
+  public upsertActor(
+    actorName: string,
+    state: FargoPrivateState,
+    options: { autoSealCredential?: boolean } = {},
+  ): void {
     const existing = this.actors.get(actorName);
     if (existing) {
       this.actors.set(actorName, {
         ...existing,
         privateState: state,
       });
-      return;
+    } else {
+      const init = this.contract.initialState(
+        createConstructorContext(state, "0".repeat(64)),
+      );
+      this.actors.set(actorName, {
+        privateState: state,
+        zswapState: init.currentZswapLocalState,
+      });
     }
-    const init = this.contract.initialState(
-      createConstructorContext(state, "0".repeat(64)),
-    );
+
+    if (options.autoSealCredential !== false && actorName !== FargoSimulator.DEFAULT_ISSUER_ACTOR) {
+      const buyerPk = pureCircuits.derive_public_key(state.secretKey);
+      const seal = pureCircuits.compute_credential_seal(
+        buyerPk,
+        state.buyerAge,
+        state.kycTier,
+        state.creditLimit,
+        state.credentialSalt,
+      );
+      this.issueBuyerCredential(FargoSimulator.DEFAULT_ISSUER_ACTOR, seal);
+    }
+  }
+
+  /**
+   * Simulates a malicious buyer modifying their local private state in memory
+   * WITHOUT obtaining a matching Bank / KYC Issuer seal on-chain.
+   */
+  public tamperActorPrivateState(
+    actorName: string,
+    overrides: Partial<
+      Pick<
+        FargoPrivateState,
+        "buyerAge" | "kycTier" | "creditLimit" | "orderAmount"
+      >
+    >,
+  ): void {
+    const existing = this.actors.get(actorName);
+    if (!existing) {
+      throw new Error(`Actor "${actorName}" is not registered`);
+    }
     this.actors.set(actorName, {
-      privateState: state,
-      zswapState: init.currentZswapLocalState,
+      ...existing,
+      privateState: {
+        ...existing.privateState,
+        ...overrides,
+      },
     });
   }
 
@@ -126,6 +178,25 @@ export class FargoSimulator {
 
   public getLedger(): Ledger {
     return ledger(this.sharedLedgerState);
+  }
+
+  public registerTrustedIssuer(issuerActorName: string): Uint8Array {
+    const ctx = this.buildCtx(issuerActorName);
+    const res = this.contract.impureCircuits.register_trusted_issuer(ctx);
+    return this.applyResult(issuerActorName, res);
+  }
+
+  public issueBuyerCredential(
+    issuerActorName: string,
+    credentialSeal: Uint8Array,
+  ): Ledger {
+    const ctx = this.buildCtx(issuerActorName);
+    const res = this.contract.impureCircuits.issue_buyer_credential(
+      ctx,
+      credentialSeal,
+    );
+    this.applyResult(issuerActorName, res);
+    return this.getLedger();
   }
 
   public registerMerchantPolicy(

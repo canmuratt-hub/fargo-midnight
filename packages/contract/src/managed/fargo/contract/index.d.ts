@@ -24,12 +24,16 @@ export type Witnesses<PS> = {
   private_credit_limit(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   private_order_amount(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
   private_order_salt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  private_credential_salt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   record_verified_receipt(context: __compactRuntime.WitnessContext<Ledger, PS>,
                           order_id_0: Uint8Array,
                           commitment_0: Uint8Array): [PS, []];
 }
 
 export type ImpureCircuits<PS> = {
+  register_trusted_issuer(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  issue_buyer_credential(context: __compactRuntime.CircuitContext<PS>,
+                         credential_seal_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   register_merchant_policy(context: __compactRuntime.CircuitContext<PS>,
                            merchant_id_0: Uint8Array,
                            min_age_0: bigint,
@@ -45,6 +49,9 @@ export type ImpureCircuits<PS> = {
 }
 
 export type ProvableCircuits<PS> = {
+  register_trusted_issuer(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  issue_buyer_credential(context: __compactRuntime.CircuitContext<PS>,
+                         credential_seal_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   register_merchant_policy(context: __compactRuntime.CircuitContext<PS>,
                            merchant_id_0: Uint8Array,
                            min_age_0: bigint,
@@ -62,6 +69,11 @@ export type ProvableCircuits<PS> = {
 export type PureCircuits = {
   derive_public_key(sk_0: Uint8Array): Uint8Array;
   derive_buyer_pseudonym(sk_0: Uint8Array, merchant_id_0: Uint8Array): Uint8Array;
+  compute_credential_seal(buyer_pk_0: Uint8Array,
+                          age_0: bigint,
+                          kyc_tier_0: bigint,
+                          credit_limit_0: bigint,
+                          credential_salt_0: Uint8Array): Uint8Array;
   compute_order_commitment(merchant_id_0: Uint8Array,
                            order_id_0: Uint8Array,
                            amount_0: bigint,
@@ -75,12 +87,21 @@ export type Circuits<PS> = {
   derive_buyer_pseudonym(context: __compactRuntime.CircuitContext<PS>,
                          sk_0: Uint8Array,
                          merchant_id_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  compute_credential_seal(context: __compactRuntime.CircuitContext<PS>,
+                          buyer_pk_0: Uint8Array,
+                          age_0: bigint,
+                          kyc_tier_0: bigint,
+                          credit_limit_0: bigint,
+                          credential_salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   compute_order_commitment(context: __compactRuntime.CircuitContext<PS>,
                            merchant_id_0: Uint8Array,
                            order_id_0: Uint8Array,
                            amount_0: bigint,
                            kyc_tier_0: bigint,
                            salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  register_trusted_issuer(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  issue_buyer_credential(context: __compactRuntime.CircuitContext<PS>,
+                         credential_seal_0: Uint8Array): __compactRuntime.CircuitResults<PS, []>;
   register_merchant_policy(context: __compactRuntime.CircuitContext<PS>,
                            merchant_id_0: Uint8Array,
                            min_age_0: bigint,
@@ -96,6 +117,18 @@ export type Circuits<PS> = {
 }
 
 export type Ledger = {
+  trusted_issuers: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(elem_0: Uint8Array): boolean;
+    [Symbol.iterator](): Iterator<Uint8Array>
+  };
+  issued_credential_seals: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(elem_0: Uint8Array): boolean;
+    [Symbol.iterator](): Iterator<Uint8Array>
+  };
   merchant_policies: {
     isEmpty(): boolean;
     size(): bigint;
@@ -117,6 +150,7 @@ export type Ledger = {
     [Symbol.iterator](): Iterator<Uint8Array>
   };
   readonly total_merchants: bigint;
+  readonly total_credentials_issued: bigint;
   readonly total_verified_orders: bigint;
   readonly total_settled_orders: bigint;
 }

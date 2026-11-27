@@ -261,4 +261,54 @@ describe("FARGO QA Suite — Boundary Conditions, Lifecycle & Stress Simulation"
     expect(bytesToHex(att.commitment)).not.toBe(saltHex);
     expect(bytesToHex(att.nullifier)).not.toBe(skHex);
   });
+
+  it("blocks tampered buyer credit limit or age when Bank/KYC credential seal does not match", () => {
+    const sim = new FargoSimulator();
+    const merchantId = idFromLabel("merchant:anti-tamper-factory");
+
+    sim.upsertActor(
+      "merchant",
+      createFargoPrivateState({ secretKey: makeKey(91) }),
+    );
+    sim.registerMerchantPolicy("merchant", merchantId, 21, 2, 50_000n);
+
+    // Bank issues official credential seal for $35,000 credit limit (below $50,000 floor)
+    sim.upsertActor(
+      "dishonestBuyer",
+      createFargoPrivateState({
+        secretKey: makeKey(92),
+        buyerAge: 32,
+        kycTier: 2,
+        creditLimit: 35_000n,
+        orderAmount: 30_000n,
+      }),
+    );
+
+    // Buyer locally tampers their creditLimit witness to $100,000 to cheat the policy!
+    sim.tamperActorPrivateState("dishonestBuyer", {
+      creditLimit: 100_000n,
+    });
+
+    expect(() =>
+      sim.verifyCommerceOrder(
+        "dishonestBuyer",
+        merchantId,
+        idFromLabel("order:tampered-credit"),
+      ),
+    ).toThrow(/Tampered or unverified bank\/KYC credential seal/);
+  });
+
+  it("rejects forged credential seals submitted by non-trusted issuers", () => {
+    const sim = new FargoSimulator();
+    sim.upsertActor(
+      "rogueIssuer",
+      createFargoPrivateState({ secretKey: makeKey(95) }),
+      { autoSealCredential: false },
+    );
+
+    const fakeSeal = idFromLabel("forged:seal:123");
+    expect(() =>
+      sim.issueBuyerCredential("rogueIssuer", fakeSeal),
+    ).toThrow(/Unauthorized: caller is not a trusted bank\/KYC issuer/);
+  });
 });
